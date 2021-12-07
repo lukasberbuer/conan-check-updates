@@ -7,9 +7,7 @@ HERE = Path(__file__).parent
 with open(HERE / "README.md", encoding="utf-8") as f:
     LONG_DESCRIPTION = f.read()
 
-INSTALL_REQUIRES = [
-    "node-semver>=0.6",
-]
+INSTALL_REQUIRES = ["node-semver>=0.6"]
 
 EXTRAS_REQUIRE = {
     "tests": [
@@ -34,7 +32,7 @@ EXTRAS_REQUIRE["dev"] = EXTRAS_REQUIRE["tests"] + EXTRAS_REQUIRE["tools"]
 setup(
     name="conan-check-updates",
     version="0.1.0",
-    description="Updates conanfile.txt/conanfile.py requirements to latest versions.",
+    description="Check for updates of your conanfile.txt/conanfile.py requirements.",
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     url="https://github.com/lukasberbuer/conan-check-updates",

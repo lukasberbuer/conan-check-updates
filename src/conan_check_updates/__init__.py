@@ -12,7 +12,7 @@ from typing import Collection, List, Optional, Union
 
 from semver import SemVer
 
-_TIMEOUT = 10
+_TIMEOUT = 30
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,17 @@ class ConanError(RuntimeError):
 
 
 async def _run_capture_stdout(cmd: str, timeout: int = _TIMEOUT) -> bytes:
+    """
+    Run process asynchronously and capture stdout.
+
+    Args:
+        cmd: Command to execute
+        timeout: Timeout in seconds
+
+    Raises:
+        TimeoutError: If process doesn't finish within timeout
+        ConanError: If exit code != 0
+    """
     process = await asyncio.create_subprocess_shell(
         cmd,
         stdout=asyncio.subprocess.PIPE,
@@ -42,7 +53,7 @@ async def _run_capture_stdout(cmd: str, timeout: int = _TIMEOUT) -> bytes:
             timeout=timeout,
         )
     except asyncio.TimeoutError:
-        raise TimeoutError(f"Timeout waiting for {cmd}") from None
+        raise TimeoutError(f"Timeout during {cmd}") from None
 
     if process.returncode != 0:
         raise ConanError(stderr.decode())
@@ -50,18 +61,19 @@ async def _run_capture_stdout(cmd: str, timeout: int = _TIMEOUT) -> bytes:
     return stdout
 
 
-async def conan_info_requirements(
-    path: Union[str, Path],
-    timeout: int = _TIMEOUT,
-) -> List[str]:
+async def conan_info_requirements(path: Union[str, Path], timeout: int = _TIMEOUT) -> List[str]:
     """Get and resolve requirements with `conan info`."""
-    cmd = f"conan info {str(path)} --json"
-    stdout = await _run_capture_stdout(cmd, timeout=timeout)
+    try:
+        stdout = await _run_capture_stdout(
+            f"conan info {str(path)} --json",
+            timeout=timeout,
+        )
+    except TimeoutError:
+        raise TimeoutError("Timeout resolving requirements with conan info") from None
 
     lines = stdout.decode().splitlines()
     lines_filtered = filter(bool, lines)
-
-    *output, result_json = filter(bool, lines_filtered)
+    *output, result_json = lines_filtered  # last line is JSON output
 
     if output:
         logger.info("\n".join(output))
@@ -220,8 +232,10 @@ async def conan_search(
     timeout: int = _TIMEOUT,
 ) -> List[RecipeReference]:
     """Search available recipes on all remotes with `conan search`."""
-    cmd = f'conan search "{package}/*" --remote all --raw'
-    stdout = await _run_capture_stdout(cmd, timeout=timeout)
+    stdout = await _run_capture_stdout(
+        f'conan search "{package}/*" --remote all --raw',
+        timeout=timeout,
+    )
 
     lines = stdout.decode().splitlines()
     lines_filtered = filter(lambda line: not line.startswith("Remote "), lines)
@@ -235,19 +249,34 @@ class VersionSearchResult:
     ref: RecipeReference
     versions: List[Union[str, Version]]
 
+    def semantic_versioning(self) -> bool:
+        return all(isinstance(v, Version) for v in [self.ref.version, *self.versions])
 
-async def conan_search_versions(ref: RecipeReference) -> VersionSearchResult:
-    refs = await conan_search(ref.package, user=ref.user, channel=ref.channel)
-    return VersionSearchResult(
-        ref=ref,
-        versions=[r.version for r in refs],  # type: ignore
-    )
+    def upgrade(self) -> Optional[Version]:
+        versions_filtered = filter(lambda v: isinstance(v, Version), self.versions)
+        versions_sorted = sorted(versions_filtered)
+        return versions_sorted[-1] if versions_sorted else None  # type: ignore
+
+
+async def conan_search_versions(
+    ref: RecipeReference,
+    *,
+    timeout: int = _TIMEOUT,
+) -> VersionSearchResult:
+    try:
+        refs = await conan_search(ref.package, user=ref.user, channel=ref.channel, timeout=timeout)
+        return VersionSearchResult(
+            ref=ref,
+            versions=[r.version for r in refs],  # type: ignore
+        )
+    except TimeoutError:
+        raise TimeoutError(f"Timeout searching for {ref.package} versions") from None
 
 
 async def conan_search_versions_parallel(
-    refs: List[RecipeReference],
+    refs: List[RecipeReference], **kwargs
 ) -> List[VersionSearchResult]:
-    coros = [conan_search_versions(ref) for ref in refs]
+    coros = [conan_search_versions(ref, **kwargs) for ref in refs]
 
     async def search():
         for coro in progressbar(asyncio.as_completed(coros), total=len(coros)):

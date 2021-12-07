@@ -7,13 +7,12 @@ from pathlib import Path
 
 from . import (
     _TIMEOUT,
-    Version,
     conan_info_requirements,
     conan_search_versions_parallel,
     parse_recipe_reference,
-    version_difference,
 )
 
+logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
     # format="[%(levelname)s] %(asctime)s: %(message)s",
@@ -22,23 +21,38 @@ logging.basicConfig(
 )
 
 
-async def run(path: Path):
-    requirements = await conan_info_requirements(path)
+class Colors:  # pylint: disable=too-few-public-methods
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    DISABLE = "\033[2m"
+    UNDERLINE = "\033[4m"
+    REVERSE = "\033[07m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    ORANGE = "\033[33m"
+    BLUE = "\033[34m"
+    PURPLE = "\033[35m"
+    CYAN = "\033[36m"
+
+
+def colored(txt: str, *colors: str) -> str:
+    return "".join([*colors, txt, Colors.RESET])
+
+
+async def run(path: Path, *, timeout: int):
+    requirements = await conan_info_requirements(path, timeout=timeout)
     refs = [parse_recipe_reference(r) for r in requirements]
 
-    results = await conan_search_versions_parallel(refs)
+    results = await conan_search_versions_parallel(refs, timeout=timeout)
 
     for result in results:
-        print(result.ref.package, result.ref.version)
-        print(result.versions)
-        has_semantic_versioning = all(
-            (isinstance(v, Version) for v in [result.ref.version, *result.versions])
+        print(
+            " {:<40} {:>8}  \u2192  {:>8}".format(  # pylint: disable=consider-using-f-string
+                result.ref.package,
+                str(result.ref.version),
+                colored(str(result.upgrade()), Colors.RED, Colors.BOLD),
+            )
         )
-        if has_semantic_versioning:
-            latest = sorted(result.versions)[-1]
-            print(f"Latest: {latest}")
-            print(version_difference(result.ref.version, latest))  # type: ignore
-        print()
 
 
 def main():
@@ -85,6 +99,8 @@ def main():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(run(args.cwd))
+        loop.run_until_complete(run(args.cwd, timeout=args.timeout))
     except KeyboardInterrupt:
         ...
+    except Exception as e:  # pylint: disable=broad-except
+        logger.error(e)
