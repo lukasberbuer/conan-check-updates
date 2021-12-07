@@ -9,7 +9,7 @@ use_parentheses = true
 
 [tool.pylint.message_control]
 good-names=[
-    "i", "j", "n", "r", "v", "it"
+    "e", "i", "j", "n", "r", "v", "it"
 ]
 disable = [
     "import-error",

@@ -12,6 +12,8 @@ from typing import Collection, List, Optional, Union
 
 from semver import SemVer
 
+_TIMEOUT = 10
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,17 +30,33 @@ class ConanError(RuntimeError):
     pass
 
 
-async def conan_info_requirements(path: Union[str, Path]) -> List[str]:
-    """Get and resolve requirements with `conan info`."""
+async def _run_capture_stdout(cmd: str, timeout: int = _TIMEOUT) -> bytes:
     process = await asyncio.create_subprocess_shell(
-        f"conan info {str(path)} --json",
+        cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await process.communicate()  # wait for subprocess to finish
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(),  # wait for subprocess to finish
+            timeout=timeout,
+        )
+    except asyncio.TimeoutError:
+        raise TimeoutError(f"Timeout waiting for {cmd}") from None
 
     if process.returncode != 0:
         raise ConanError(stderr.decode())
+
+    return stdout
+
+
+async def conan_info_requirements(
+    path: Union[str, Path],
+    timeout: int = _TIMEOUT,
+) -> List[str]:
+    """Get and resolve requirements with `conan info`."""
+    cmd = f"conan info {str(path)} --json"
+    stdout = await _run_capture_stdout(cmd, timeout=timeout)
 
     lines = stdout.decode().splitlines()
     lines_filtered = filter(bool, lines)
@@ -195,18 +213,15 @@ def progressbar(
 
 
 async def conan_search(
-    package: str, user: Optional[str] = None, channel: Optional[str] = None
+    package: str,
+    user: Optional[str] = None,
+    channel: Optional[str] = None,
+    *,
+    timeout: int = _TIMEOUT,
 ) -> List[RecipeReference]:
     """Search available recipes on all remotes with `conan search`."""
-    process = await asyncio.create_subprocess_shell(
-        f'conan search "{package}/*" --remote all --raw',
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, stderr = await process.communicate()  # wait for subprocess to finish
-
-    if process.returncode != 0:
-        raise ConanError(stderr.decode())
+    cmd = f'conan search "{package}/*" --remote all --raw'
+    stdout = await _run_capture_stdout(cmd, timeout=timeout)
 
     lines = stdout.decode().splitlines()
     lines_filtered = filter(lambda line: not line.startswith("Remote "), lines)
@@ -236,7 +251,10 @@ async def conan_search_versions_parallel(
 
     async def search():
         for coro in progressbar(asyncio.as_completed(coros), total=len(coros)):
-            yield await coro
+            try:
+                yield await coro
+            except TimeoutError as e:
+                logger.warning(e)
 
     results = [result async for result in search()]
     results_original_order = sorted(results, key=lambda result: refs.index(result.ref))
