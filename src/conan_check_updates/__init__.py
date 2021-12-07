@@ -45,7 +45,8 @@ async def conan_info_requirements(path: Union[str, Path]) -> List[str]:
 
     *output, result_json = filter(bool, lines_filtered)
 
-    logger.info("\n".join(output))
+    if output:
+        logger.info("\n".join(output))
 
     result = json.loads(result_json)
     conanfile_reference = next(
