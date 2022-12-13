@@ -4,11 +4,13 @@ import argparse
 import asyncio
 import logging
 from pathlib import Path
+from typing import List
 
 from . import (
     _TIMEOUT,
     conan_info_requirements,
     conan_search_versions_parallel,
+    matches_any,
     parse_recipe_reference,
 )
 
@@ -39,11 +41,12 @@ def colored(txt: str, *colors: str) -> str:
     return "".join([*colors, txt, Colors.RESET])
 
 
-async def run(path: Path, *, timeout: int):
+async def run(path: Path, *, package_filter: List[str], timeout: int):
     requirements = await conan_info_requirements(path, timeout=timeout)
     refs = [parse_recipe_reference(r) for r in requirements]
+    refs_filtered = [ref for ref in refs if matches_any(ref.package, *package_filter)]
 
-    results = await conan_search_versions_parallel(refs, timeout=timeout)
+    results = await conan_search_versions_parallel(refs_filtered, timeout=timeout)
 
     for result in results:
         print(
@@ -70,7 +73,7 @@ def main():
         nargs="*",
         type=str,
         default=None,
-        help="list or regex of package names to check (all others will be ignored)",
+        help="include only package names matching the given string, wildcard, glob, list, /regex/",
     )
     parser.add_argument(
         "--version, -V",
@@ -94,13 +97,9 @@ def main():
     )
     args = parser.parse_args()
 
-    print(args.filter)
-
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(run(args.cwd, timeout=args.timeout))
+        loop.run_until_complete(run(args.cwd, package_filter=args.filter, timeout=args.timeout))
     except KeyboardInterrupt:
         ...
-    except Exception as e:  # pylint: disable=broad-except
-        logger.error(e)

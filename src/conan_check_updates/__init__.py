@@ -6,6 +6,7 @@ import logging
 import sys
 from dataclasses import dataclass
 from enum import Enum, auto
+from fnmatch import fnmatch
 from functools import total_ordering
 from pathlib import Path
 from typing import Collection, List, Optional, Union
@@ -89,6 +90,24 @@ async def conan_info_requirements(path: Union[str, Path], timeout: int = _TIMEOU
         *conanfile_reference.get("requires", []),
         *conanfile_reference.get("build_requires", []),
     ]
+
+
+def matches_any(value: str, *patterns: str) -> bool:
+    """
+    Filter package names by patterns.
+
+    Return `True` if any of the pattern matches. Wildcards `*` and `?` are allowed.
+    Patterns can be inverted with a prepended !, e.g. `!boost*`.
+    """
+    if not patterns:
+        return True
+
+    def is_match(pattern):
+        should_match = not pattern.startswith("!")
+        pattern = pattern.lstrip("!")
+        return fnmatch(value, pattern) == should_match
+
+    return any(is_match(pattern) for pattern in patterns)
 
 
 @total_ordering
@@ -283,7 +302,7 @@ async def conan_search_versions_parallel(
             try:
                 yield await coro
             except TimeoutError as e:
-                logger.warning(e)
+                logger.warning(e)  # noqa: G200
 
     results = [result async for result in search()]
     results_original_order = sorted(results, key=lambda result: refs.index(result.ref))
