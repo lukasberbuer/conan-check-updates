@@ -9,7 +9,12 @@ from enum import IntEnum
 from fnmatch import fnmatch
 from functools import total_ordering
 from pathlib import Path
-from typing import Collection, List, Optional, Union
+from typing import Collection, List, Optional, Sequence, Union
+
+try:
+    from typing import TypeGuard
+except ImportError:
+    from typing_extensions import TypeGuard
 
 from semver import SemVer
 
@@ -198,6 +203,30 @@ def parse_version(version: str) -> Union[str, Version]:
         return version
 
 
+def is_semantic_version(value) -> TypeGuard[Version]:
+    """Check if value is a semantic version."""
+    return isinstance(value, Version)
+
+
+def find_upgrade(
+    current_version: Union[str, Version],
+    versions: Sequence[Union[str, Version]],
+    target: VersionPart,
+) -> Optional[Version]:
+    """Find latest upgrade for given target."""
+    if not is_semantic_version(current_version):
+        return None
+
+    versions_semantic = filter(is_semantic_version, versions)
+
+    def is_upgrade(v: Version) -> bool:
+        assert is_semantic_version(current_version)
+        return v > current_version and (version_difference(current_version, v) or 0) <= target
+
+    versions_upgrade = list(filter(is_upgrade, versions_semantic))
+    return max(versions_upgrade) if versions_upgrade else None
+
+
 @dataclass
 class RecipeReference:
     """Parsed recipe identifier of the form `name/version@user/channel`."""
@@ -268,15 +297,6 @@ async def conan_search(
 class VersionSearchResult:
     ref: RecipeReference
     versions: List[Union[str, Version]]
-
-    @property
-    def versions_semantic(self):
-        return sorted(filter(lambda v: isinstance(v, Version), self.versions))
-
-    def upgrade(self) -> Optional[Version]:
-        if not isinstance(self.ref.version, Version):
-            return None
-        return next(reversed(self.versions_semantic), None)
 
 
 async def conan_search_versions(

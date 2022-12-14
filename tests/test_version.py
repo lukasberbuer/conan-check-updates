@@ -1,6 +1,8 @@
+from typing import List, Optional
+
 import pytest
 
-from conan_check_updates import Version, VersionError, VersionPart, version_difference
+from conan_check_updates import Version, VersionError, VersionPart, find_upgrade, version_difference
 
 
 @pytest.mark.parametrize(
@@ -49,3 +51,22 @@ def test_invalid_version(version: str):
 )
 def test_version_difference(version1: str, version2: str, part: VersionPart):
     assert version_difference(Version(version1), Version(version2)) == part
+
+
+@pytest.mark.parametrize(
+    ("current", "available", "target", "expected"),
+    [
+        ("1.0.0", [], VersionPart.MAJOR, None),
+        ("1.0.0", ("1.0.0",), VersionPart.MAJOR, None),
+        ("1.0.0", ("2.0.0", "1.1.0", "1.0.1"), VersionPart.MAJOR, "2.0.0"),
+        ("1.0.0", ("2.0.0", "1.1.0", "1.0.1"), VersionPart.MINOR, "1.1.0"),
+        ("1.0.0", ("2.0.0", "1.1.0", "1.0.1"), VersionPart.PATCH, "1.0.1"),
+    ],
+)
+def test_find_upgrade(
+    current: str, available: List[str], target: VersionPart, expected: Optional[str]
+):
+    current_version = Version(current)
+    versions = [Version(v) for v in available]
+    expected_version = Version(expected) if expected else None
+    assert find_upgrade(current_version, versions, target) == expected_version

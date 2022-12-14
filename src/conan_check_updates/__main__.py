@@ -4,13 +4,16 @@ import argparse
 import asyncio
 import logging
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Sequence, Union
 
 from . import (
     _TIMEOUT,
     Version,
+    VersionPart,
     conan_info_requirements,
     conan_search_versions_parallel,
+    find_upgrade,
+    is_semantic_version,
     matches_any,
     parse_recipe_reference,
 )
@@ -37,6 +40,7 @@ def colored(txt: str, *colors: str) -> str:
 
 
 def highlight_version_diff(version: str, compare: str, highlight=Colors.RED) -> str:
+    """Highlight differing parts of version string."""
     i_first_diff = next(
         (i for i, (s1, s2) in enumerate(zip(version, compare)) if s1 != s2),
         None,
@@ -46,7 +50,19 @@ def highlight_version_diff(version: str, compare: str, highlight=Colors.RED) -> 
     return version[:i_first_diff] + highlight + version[i_first_diff:] + Colors.RESET
 
 
-async def run(path: Path, *, package_filter: List[str], timeout: int):
+def upgrade_version_string(
+    current_version: Union[str, Version],
+    upgrade_version: Optional[Version],
+    versions: Sequence[Union[str, Version]],
+) -> str:
+    if not is_semantic_version(current_version):
+        return ", ".join(map(str, versions))  # print list of available versions
+    if upgrade_version:
+        return highlight_version_diff(str(upgrade_version), str(current_version))
+    return str(current_version)
+
+
+async def run(path: Path, *, package_filter: List[str], target: VersionPart, timeout: int):
     print("Get requirements with ", colored("conan info", Colors.BOLD), "...", sep="")
     requirements = await conan_info_requirements(path, timeout=timeout)
     refs = [parse_recipe_reference(r) for r in requirements]
@@ -59,23 +75,22 @@ async def run(path: Path, *, package_filter: List[str], timeout: int):
     cols = {
         "cols_package": max(0, 10, *(len(str(r.ref.package)) for r in results)) + 1,
         "cols_version": max(0, 10, *(len(str(r.ref.version)) for r in results)),
-        "cols_upgrade": max(0, 10, *(len(str(r.upgrade())) for r in results)),
     }
-    format_str = "{:<{cols_package}} {:>{cols_version}}  \u2192  {:<{cols_upgrade}}"
+    format_str = "{:<{cols_package}} {:>{cols_version}}  \u2192  {}"
 
     for result in results:
         current_version = result.ref.version
-        upgrade_version = result.upgrade()
-        upgrade_version_str = (
-            highlight_version_diff(str(upgrade_version), str(current_version))
-            if upgrade_version and isinstance(current_version, Version)
-            else ", ".join(map(str, result.versions))
-        )
+        upgrade_version = find_upgrade(current_version, result.versions, target=target)
+
+        skip = is_semantic_version(current_version) and upgrade_version is None
+        if skip:
+            continue
+
         print(
             format_str.format(
                 result.ref.package,
                 str(current_version),
-                upgrade_version_str,
+                upgrade_version_string(current_version, upgrade_version, result.versions),
                 **cols,
             )
         )
@@ -84,42 +99,59 @@ async def run(path: Path, *, package_filter: List[str], timeout: int):
 def main():
     """Main function executed by conan-check-updates executable."""
 
-    class Formatter(argparse.ArgumentDefaultsHelpFormatter):
-        "Custom argparse formatter."
-
     parser = argparse.ArgumentParser(
         "conan-check-updates",
-        formatter_class=Formatter,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="Check for updates of your conanfile.txt/conanfile.py requirements.",
     )
     parser.add_argument(
         "filter",
         nargs="*",
         type=str,
         default=None,
-        help="include only package names matching the given string, wildcard, glob, list, /regex/",
-    )
-    parser.add_argument(
-        "--version, -V",
-        action="store_true",
-        help="output the version number",
+        help="Include only package names matching the given string, wildcard, glob, list, /regex/",
     )
     parser.add_argument(
         "--cwd",
+        dest="cwd",
         type=lambda p: Path(p).resolve(),
         default=Path.cwd().resolve(),
         help=(
-            "path to a folder containing a recipe or to a recipe file directly "
+            "Path to a folder containing a recipe or to a recipe file directly "
             "(conanfile.py or conanfile.txt)"
         ),
+    )
+    parser.add_argument(
+        "--target",
+        dest="target",
+        choices=("major", "minor", "patch"),
+        default="major",
+        help="Determines the version to upgrade to",
     )
     parser.add_argument(
         "--timeout",
         type=int,
         default=_TIMEOUT,
-        help="global timeout for `conan info|search` in seconds",
+        help="Global timeout for `conan info|search` in seconds",
     )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version="0.1.0",
+        help="Show the version and exit",
+    )
+    parser.add_argument("--help, -h", action="help", help="Show this message and exit")
+
     args = parser.parse_args()
     logger.debug("CLI args: %s", args)
+
+    def parse_target_choice(choice: str) -> VersionPart:
+        mapping = {
+            "major": VersionPart.MAJOR,
+            "minor": VersionPart.MINOR,
+            "patch": VersionPart.PATCH,
+        }
+        return mapping.get(choice, VersionPart.MAJOR)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -132,6 +164,13 @@ def main():
 
     try:
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(run(args.cwd, package_filter=args.filter, timeout=args.timeout))
+        loop.run_until_complete(
+            run(
+                args.cwd,
+                package_filter=args.filter,
+                target=parse_target_choice(args.target),
+                timeout=args.timeout,
+            ),
+        )
     except KeyboardInterrupt:
         ...

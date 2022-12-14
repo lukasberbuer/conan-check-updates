@@ -7,7 +7,10 @@ HERE = Path(__file__).parent
 with open(HERE / "README.md", encoding="utf-8") as f:
     LONG_DESCRIPTION = f.read()
 
-INSTALL_REQUIRES = ["node-semver>=0.6"]
+INSTALL_REQUIRES = [
+    "node-semver>=0.6",
+    "typing_extensions; python_version<'3.10'",
+]
 
 EXTRAS_REQUIRE = {
     "tests": [
