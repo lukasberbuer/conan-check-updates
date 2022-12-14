@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import logging
+import sys
 from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
@@ -17,6 +18,11 @@ from . import (
     matches_any,
     parse_recipe_reference,
 )
+
+if sys.version_info >= (3, 8):
+    from importlib import metadata
+else:
+    import importlib_metadata as metadata
 
 logger = logging.getLogger(__name__)
 
@@ -96,62 +102,85 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
         )
 
 
+def get_version():
+    """Get package version."""
+    return metadata.version(__package__ or __name__)
+
+
 def main():
     """Main function executed by conan-check-updates executable."""
+
+    target_choices = {
+        "major": VersionPart.MAJOR,
+        "minor": VersionPart.MINOR,
+        "patch": VersionPart.PATCH,
+    }
+
+    def list_choices(it) -> str:
+        items = list(map(str, it))
+        last = " or ".join(items[-2:])
+        return ", ".join((*items[:-2], last))
 
     parser = argparse.ArgumentParser(
         "conan-check-updates",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description="Check for updates of your conanfile.txt/conanfile.py requirements.",
+        add_help=False,
     )
     parser.add_argument(
         "filter",
         nargs="*",
+        # metavar="<filter>",
         type=str,
         default=None,
-        help="Include only package names matching the given string, wildcard, glob, list, /regex/",
+        help=(
+            "Include only package names matching any of the given strings or patterns.\n"
+            "Wildcards (*, ?) are allowed.\n"
+            "Patterns can be inverted with a prepended !, e.g. !boost*."
+        ),
     )
     parser.add_argument(
         "--cwd",
         dest="cwd",
+        # metavar="<path>",
         type=lambda p: Path(p).resolve(),
-        default=Path.cwd().resolve(),
+        default=Path("."),
         help=(
             "Path to a folder containing a recipe or to a recipe file directly "
-            "(conanfile.py or conanfile.txt)"
+            "(conanfile.py or conanfile.txt)."
         ),
     )
     parser.add_argument(
         "--target",
         dest="target",
-        choices=("major", "minor", "patch"),
+        # metavar="<target>",
+        choices=list(target_choices.keys()),
         default="major",
-        help="Determines the version to upgrade to",
+        help=f"Limit upgrade level: {list_choices(target_choices.keys())}.",
     )
     parser.add_argument(
         "--timeout",
+        # metavar="<s>",
         type=int,
         default=_TIMEOUT,
-        help="Global timeout for `conan info|search` in seconds",
+        help="Timeout for `conan info|search` in seconds.",
     )
     parser.add_argument(
+        "-V",
         "--version",
         action="version",
-        version="0.1.0",
-        help="Show the version and exit",
+        version=get_version(),
+        help="Show the version and exit.",
     )
-    parser.add_argument("--help, -h", action="help", help="Show this message and exit")
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="help",
+        help="Show this message and exit.",
+    )
 
     args = parser.parse_args()
     logger.debug("CLI args: %s", args)
-
-    def parse_target_choice(choice: str) -> VersionPart:
-        mapping = {
-            "major": VersionPart.MAJOR,
-            "minor": VersionPart.MINOR,
-            "patch": VersionPart.PATCH,
-        }
-        return mapping.get(choice, VersionPart.MAJOR)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -168,7 +197,7 @@ def main():
             run(
                 args.cwd,
                 package_filter=args.filter,
-                target=parse_target_choice(args.target),
+                target=target_choices.get(args.target, VersionPart.MAJOR),
                 timeout=args.timeout,
             ),
         )

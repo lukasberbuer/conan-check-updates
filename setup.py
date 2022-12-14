@@ -9,6 +9,7 @@ with open(HERE / "README.md", encoding="utf-8") as f:
 
 INSTALL_REQUIRES = [
     "node-semver>=0.6",
+    "importlib_metadata; python_version<'3.8'",
     "typing_extensions; python_version<'3.10'",
 ]
 
