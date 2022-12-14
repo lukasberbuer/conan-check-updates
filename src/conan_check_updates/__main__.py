@@ -8,6 +8,7 @@ from typing import List
 
 from . import (
     _TIMEOUT,
+    Version,
     conan_info_requirements,
     conan_search_versions_parallel,
     matches_any,
@@ -15,12 +16,6 @@ from . import (
 )
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    # format="[%(levelname)s] %(asctime)s: %(message)s",
-    format="[%(levelname)s] %(message)s",
-    datefmt="%d.%m.%Y %H:%M:%S",
-)
 
 
 class Colors:  # pylint: disable=too-few-public-methods
@@ -38,22 +33,50 @@ class Colors:  # pylint: disable=too-few-public-methods
 
 
 def colored(txt: str, *colors: str) -> str:
-    return "".join([*colors, txt, Colors.RESET])
+    return "".join((*colors, txt, Colors.RESET))
+
+
+def highlight_version_diff(version: str, compare: str, highlight=Colors.RED) -> str:
+    i_first_diff = next(
+        (i for i, (s1, s2) in enumerate(zip(version, compare)) if s1 != s2),
+        None,
+    )
+    if i_first_diff is None:
+        return version
+    return version[:i_first_diff] + highlight + version[i_first_diff:] + Colors.RESET
 
 
 async def run(path: Path, *, package_filter: List[str], timeout: int):
+    print("Get requirements with ", colored("conan info", Colors.BOLD), "...", sep="")
     requirements = await conan_info_requirements(path, timeout=timeout)
     refs = [parse_recipe_reference(r) for r in requirements]
     refs_filtered = [ref for ref in refs if matches_any(ref.package, *package_filter)]
 
+    print("Find available versions with ", colored("conan search", Colors.BOLD), "...", sep="")
     results = await conan_search_versions_parallel(refs_filtered, timeout=timeout)
+    logger.debug("conan search results: %s", results)
+
+    cols = {
+        "cols_package": max(0, 10, *(len(str(r.ref.package)) for r in results)) + 1,
+        "cols_version": max(0, 10, *(len(str(r.ref.version)) for r in results)),
+        "cols_upgrade": max(0, 10, *(len(str(r.upgrade())) for r in results)),
+    }
+    format_str = "{:<{cols_package}} {:>{cols_version}}  \u2192  {:<{cols_upgrade}}"
 
     for result in results:
+        current_version = result.ref.version
+        upgrade_version = result.upgrade()
+        upgrade_version_str = (
+            highlight_version_diff(str(upgrade_version), str(current_version))
+            if upgrade_version and isinstance(current_version, Version)
+            else ", ".join(map(str, result.versions))
+        )
         print(
-            " {:<40} {:>8}  \u2192  {:>8}".format(  # pylint: disable=consider-using-f-string
+            format_str.format(
                 result.ref.package,
-                str(result.ref.version),
-                colored(str(result.upgrade()), Colors.RED, Colors.BOLD),
+                str(current_version),
+                upgrade_version_str,
+                **cols,
             )
         )
 
@@ -96,10 +119,19 @@ def main():
         help="global timeout for `conan info|search` in seconds",
     )
     args = parser.parse_args()
+    logger.debug("CLI args: %s", args)
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    logging.basicConfig(
+        level=logging.INFO,
+        # format="[%(levelname)s] %(asctime)s: %(message)s",
+        format="[%(levelname)s] %(message)s",
+        datefmt="%d.%m.%Y %H:%M:%S",
+    )
+    logging.getLogger("asyncio").setLevel(logging.INFO)
+    logging.getLogger("semver").setLevel(logging.INFO)
+
     try:
+        loop = asyncio.get_event_loop()
         loop.run_until_complete(run(args.cwd, package_filter=args.filter, timeout=args.timeout))
     except KeyboardInterrupt:
         ...

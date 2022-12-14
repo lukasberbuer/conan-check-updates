@@ -5,7 +5,7 @@ import json
 import logging
 import sys
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import IntEnum
 from fnmatch import fnmatch
 from functools import total_ordering
 from pathlib import Path
@@ -86,6 +86,7 @@ async def conan_info_requirements(path: Union[str, Path], timeout: int = _TIMEOU
             result,
         )
     )
+    logger.debug("conan info result (only conanfile ref): %s", conanfile_reference)
     return [
         *conanfile_reference.get("requires", []),
         *conanfile_reference.get("build_requires", []),
@@ -166,12 +167,12 @@ class Version:
         return self._semver.compare(other._semver) < 0
 
 
-class VersionPart(Enum):
-    MAJOR = auto()
-    MINOR = auto()
-    PATCH = auto()
-    PRERELEASE = auto()
-    BUILD = auto()
+class VersionPart(IntEnum):
+    MAJOR = 5
+    MINOR = 4
+    PATCH = 3
+    PRERELEASE = 2
+    BUILD = 1
 
 
 def version_difference(version1: Version, version2: Version) -> Optional[VersionPart]:
@@ -268,13 +269,14 @@ class VersionSearchResult:
     ref: RecipeReference
     versions: List[Union[str, Version]]
 
-    def semantic_versioning(self) -> bool:
-        return all(isinstance(v, Version) for v in [self.ref.version, *self.versions])
+    @property
+    def versions_semantic(self):
+        return sorted(filter(lambda v: isinstance(v, Version), self.versions))
 
     def upgrade(self) -> Optional[Version]:
-        versions_filtered = filter(lambda v: isinstance(v, Version), self.versions)
-        versions_sorted = sorted(versions_filtered)
-        return versions_sorted[-1] if versions_sorted else None  # type: ignore
+        if not isinstance(self.ref.version, Version):
+            return None
+        return next(reversed(self.versions_semantic), None)
 
 
 async def conan_search_versions(
