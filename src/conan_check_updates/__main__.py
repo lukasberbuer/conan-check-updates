@@ -7,17 +7,9 @@ import sys
 from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
-from . import (
-    _TIMEOUT,
-    Version,
-    VersionPart,
-    conan_info_requirements,
-    conan_search_versions_parallel,
-    find_upgrade,
-    is_semantic_version,
-    matches_any,
-    parse_recipe_reference,
-)
+from .conan import TIMEOUT, parse_recipe_reference, run_info, run_search_versions_parallel
+from .filter import matches_any
+from .version import Version, VersionPart, find_upgrade, is_semantic_version
 
 if sys.version_info >= (3, 8):
     from importlib import metadata
@@ -70,12 +62,12 @@ def upgrade_version_string(
 
 async def run(path: Path, *, package_filter: List[str], target: VersionPart, timeout: int):
     print("Get requirements with ", colored("conan info", Colors.BOLD), "...", sep="")
-    requirements = await conan_info_requirements(path, timeout=timeout)
+    requirements = await run_info(path, timeout=timeout)
     refs = [parse_recipe_reference(r) for r in requirements]
     refs_filtered = [ref for ref in refs if matches_any(ref.package, *package_filter)]
 
     print("Find available versions with ", colored("conan search", Colors.BOLD), "...", sep="")
-    results = await conan_search_versions_parallel(refs_filtered, timeout=timeout)
+    results = await run_search_versions_parallel(refs_filtered, timeout=timeout)
     logger.debug("conan search results: %s", results)
 
     cols = {
@@ -162,7 +154,7 @@ def main():
         "--timeout",
         # metavar="<s>",
         type=int,
-        default=_TIMEOUT,
+        default=TIMEOUT,
         help="Timeout for `conan info|search` in seconds.",
     )
     parser.add_argument(

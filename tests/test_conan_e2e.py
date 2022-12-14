@@ -2,20 +2,20 @@ from pathlib import Path
 
 import pytest
 
-from conan_check_updates import RecipeReference, conan_info_requirements, conan_search
+from conan_check_updates.conan import RecipeReference, run_info, run_search
 
 
 @pytest.mark.asyncio()
-async def test_conan_search():
-    refs = await conan_search("fmt")
+async def test_run_search():
+    refs = await run_search("fmt")
     assert len(refs) > 0
     assert RecipeReference("fmt", "8.0.0") in refs
 
 
 @pytest.mark.asyncio()
-async def test_conan_info_requirements():
+async def test_run_info():
     cwd = Path(__file__).parent / "conanfile.txt"
-    requirements = await conan_info_requirements(cwd)
+    requirements = await run_info(cwd)
 
     assert len(requirements) == 5
 

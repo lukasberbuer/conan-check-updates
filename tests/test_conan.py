@@ -9,13 +9,14 @@ except ImportError:
 
 import pytest
 
-from conan_check_updates import (
+from conan_check_updates.conan import (
     ConanError,
     RecipeReference,
-    Version,
-    conan_info_requirements,
-    conan_search,
+    parse_recipe_reference,
+    run_info,
+    run_search,
 )
+from conan_check_updates.version import Version
 
 pytestmark = pytest.mark.skipif(
     sys.version_info < (3, 8),
@@ -44,13 +45,13 @@ Version ranges solved
 
 
 @pytest.mark.asyncio()
-async def test_conan_info_requirements(mock_process):
+async def test_run_info(mock_process):
     stdout = CONAN_INFO_RESPONE
     stderr = b""
     mock_process.communicate = AsyncMock(return_value=(stdout, stderr))
     mock_process.returncode = 0
 
-    result = await conan_info_requirements(".")
+    result = await run_info(".")
     assert result == [
         "catch2/2.13.7",
         "fmt/8.0.0",
@@ -60,14 +61,30 @@ async def test_conan_info_requirements(mock_process):
     ]
 
 
+@pytest.mark.parametrize(
+    ("reference", "parsed"),
+    [
+        ("pkg/0.1.0", RecipeReference("pkg", Version("0.1.0"))),
+        ("pkg/0.1.0@user/stable", RecipeReference("pkg", Version("0.1.0"), "user", "stable")),
+    ],
+)
+def test_parse_recipe_reference(reference, parsed):
+    assert parse_recipe_reference(reference) == parsed
+
+
+def test_recipe_reference_parse_version_post_init():
+    assert isinstance(RecipeReference("pkg", "0.1.0").version, Version)
+    assert RecipeReference("pkg", "0.1.0") == RecipeReference("pkg", Version("0.1.0"))
+
+
 @pytest.mark.asyncio()
-async def test_conan_search(mock_process):
+async def test_run_search(mock_process):
     stdout = b"Remote 'conancenter':\r\n" b"fmt/5.3.0\r\n" b"fmt/6.0.0\r\n" b"fmt/6.1.0\r\n"
     stderr = b""
     mock_process.communicate = AsyncMock(return_value=(stdout, stderr))
     mock_process.returncode = 0
 
-    refs = await conan_search("fmt")
+    refs = await run_search("fmt")
 
     assert len(refs) == 3
     assert refs[0] == RecipeReference("fmt", Version("5.3.0"))
@@ -76,18 +93,18 @@ async def test_conan_search(mock_process):
 
 
 @pytest.mark.asyncio()
-async def test_conan_search_no_results(mock_process):
+async def test_run_search_no_results(mock_process):
     mock_process.communicate = AsyncMock(return_value=(b"", b""))
     mock_process.returncode = 0
 
-    refs = await conan_search("")
+    refs = await run_search("")
     assert len(refs) == 0
 
 
 @pytest.mark.asyncio()
-async def test_conan_search_fail(mock_process):
+async def test_run_search_fail(mock_process):
     mock_process.communicate = AsyncMock(return_value=(b"", b"Error..."))
     mock_process.returncode = 1
 
     with pytest.raises(ConanError, match="Error..."):
-        await conan_search("")
+        await run_search("")

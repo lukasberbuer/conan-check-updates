@@ -2,7 +2,14 @@ from typing import List, Optional
 
 import pytest
 
-from conan_check_updates import Version, VersionError, VersionPart, find_upgrade, version_difference
+from conan_check_updates.version import (
+    Version,
+    VersionError,
+    VersionPart,
+    find_upgrade,
+    parse_version,
+    version_difference,
+)
 
 
 @pytest.mark.parametrize(
@@ -36,6 +43,21 @@ def test_version(version: str, major: int, minor: int, patch: int, prerelease: s
 def test_invalid_version(version: str):
     with pytest.raises(VersionError):
         Version(version)
+
+
+@pytest.mark.parametrize(
+    ("version_str", "expected"),
+    [
+        ("0", Version("0.0.0")),
+        ("0.1", Version("0.1.0")),
+        ("0.1.2", Version("0.1.2")),
+        ("0.1.2-rc1", Version("0.1.2-rc1")),
+        ("xyz", "xyz"),
+        ("", ""),
+    ],
+)
+def test_parse_version(version_str, expected):
+    assert parse_version(version_str) == expected
 
 
 @pytest.mark.parametrize(

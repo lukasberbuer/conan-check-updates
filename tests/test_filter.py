@@ -1,6 +1,6 @@
 import pytest
 
-from conan_check_updates import matches_any
+from conan_check_updates.filter import matches_any
 
 
 @pytest.mark.parametrize(
