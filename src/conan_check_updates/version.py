@@ -1,10 +1,12 @@
+import sys
 from enum import IntEnum
 from functools import total_ordering
 from typing import Optional, Sequence, Union
 
-try:
+
+if sys.version_info >= (3, 10):
     from typing import TypeGuard
-except ImportError:
+else:
     from typing_extensions import TypeGuard
 
 from semver import SemVer
