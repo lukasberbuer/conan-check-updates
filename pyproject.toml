@@ -113,7 +113,7 @@ source = ["src", ".tox/*/site-packages"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = black, isort, pylint, mypy, py37, py38, py39, py310, coverage-report
+envlist = black, isort, pylint, mypy, py37, py38, py39, py310, py311, coverage-report
 
 [testenv:black]
 skip_install = true
