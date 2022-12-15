@@ -1,16 +1,13 @@
 import asyncio
 import json
-import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Collection, List, Optional, Union
+from typing import AsyncIterator, List, Optional, Union
 
 from .version import Version, parse_version
 
 TIMEOUT = 30
-
-logger = logging.getLogger(__name__)
 
 
 if sys.platform == "win32":
@@ -22,7 +19,7 @@ class ConanError(RuntimeError):
     pass
 
 
-async def _run_capture_stdout(cmd: str, timeout: int = TIMEOUT) -> bytes:
+async def _run_capture_stdout(cmd: str, timeout: Optional[int] = TIMEOUT) -> bytes:
     """
     Run process asynchronously and capture stdout.
 
@@ -53,7 +50,15 @@ async def _run_capture_stdout(cmd: str, timeout: int = TIMEOUT) -> bytes:
     return stdout
 
 
-async def run_info(path: Union[str, Path], timeout: int = TIMEOUT) -> List[str]:
+@dataclass
+class ConanInfoResult:
+    reference: str
+    requires: List[str]
+    build_requires: List[str]
+    output: Optional[str] = None  # stdout capture
+
+
+async def run_info(path: Union[str, Path], timeout: Optional[int] = TIMEOUT) -> ConanInfoResult:
     """Get and resolve requirements with `conan info`."""
     try:
         stdout = await _run_capture_stdout(
@@ -67,9 +72,6 @@ async def run_info(path: Union[str, Path], timeout: int = TIMEOUT) -> List[str]:
     lines_filtered = filter(bool, lines)
     *output, result_json = lines_filtered  # last line is JSON output
 
-    if output:
-        logger.info("\n".join(output))
-
     result = json.loads(result_json)
     conanfile_reference = next(
         filter(
@@ -77,11 +79,12 @@ async def run_info(path: Union[str, Path], timeout: int = TIMEOUT) -> List[str]:
             result,
         )
     )
-    logger.debug("conan info result (only conanfile ref): %s", conanfile_reference)
-    return [
-        *conanfile_reference.get("requires", []),
-        *conanfile_reference.get("build_requires", []),
-    ]
+    return ConanInfoResult(
+        reference=conanfile_reference["reference"],
+        requires=conanfile_reference.get("requires", []),
+        build_requires=conanfile_reference.get("build_requires", []),
+        output="\n".join(output) if output else None,
+    )
 
 
 @dataclass
@@ -111,31 +114,12 @@ def parse_recipe_reference(reference: str) -> RecipeReference:
     )
 
 
-def progressbar(
-    it: Collection, total: Optional[int] = None, desc: str = "", size: int = 20, file=sys.stderr
-):
-    if total is None:
-        total = len(it)
-
-    def show(j):
-        n = int(size * j / total)
-        file.write(f"{desc}[{'=' * n}{'-' * (size - n)}] {j}/{total} {int(100 * j / total)}%\r")
-        file.flush()
-
-    show(0)
-    for i, item in enumerate(it):
-        yield item
-        show(i + 1)
-    file.write("\n")
-    file.flush()
-
-
 async def run_search(
     package: str,
     user: Optional[str] = None,
     channel: Optional[str] = None,
     *,
-    timeout: int = TIMEOUT,
+    timeout: Optional[int] = TIMEOUT,
 ) -> List[RecipeReference]:
     """Search available recipes on all remotes with `conan search`."""
     stdout = await _run_capture_stdout(
@@ -159,7 +143,7 @@ class VersionSearchResult:
 async def run_search_versions(
     ref: RecipeReference,
     *,
-    timeout: int = TIMEOUT,
+    timeout: Optional[int] = TIMEOUT,
 ) -> VersionSearchResult:
     try:
         refs = await run_search(ref.package, user=ref.user, channel=ref.channel, timeout=timeout)
@@ -172,17 +156,16 @@ async def run_search_versions(
 
 
 async def run_search_versions_parallel(
-    refs: List[RecipeReference], **kwargs
-) -> List[VersionSearchResult]:
-    coros = [run_search_versions(ref, **kwargs) for ref in refs]
-
-    async def search():
-        for coro in progressbar(asyncio.as_completed(coros), total=len(coros)):
-            try:
-                yield await coro
-            except TimeoutError as e:
-                logger.warning(e)  # noqa: G200
-
-    results = [result async for result in search()]
-    results_original_order = sorted(results, key=lambda result: refs.index(result.ref))
-    return results_original_order
+    refs: List[RecipeReference],
+    *,
+    timeout: int = TIMEOUT,
+) -> AsyncIterator[VersionSearchResult]:
+    coros = asyncio.as_completed(
+        [run_search_versions(ref, timeout=None) for ref in refs],
+        timeout=timeout,  # use global timeout, disable timeout of single searches
+    )
+    try:
+        for coro in coros:
+            yield await coro
+    except (asyncio.TimeoutError, TimeoutError):
+        raise TimeoutError("Timeout searching for package versions") from None

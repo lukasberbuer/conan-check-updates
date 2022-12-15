@@ -1,4 +1,3 @@
-import logging
 from enum import IntEnum
 from functools import total_ordering
 from typing import Optional, Sequence, Union
@@ -9,8 +8,6 @@ except ImportError:
     from typing_extensions import TypeGuard
 
 from semver import SemVer
-
-logger = logging.getLogger(__name__)
 
 
 class VersionError(ValueError):

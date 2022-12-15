@@ -5,7 +5,7 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import AsyncIterator, List, Optional, Sequence, TextIO, Union
 
 from .conan import TIMEOUT, parse_recipe_reference, run_info, run_search_versions_parallel
 from .filter import matches_any
@@ -60,15 +60,50 @@ def upgrade_version_string(
     return str(current_version)
 
 
+async def async_progressbar(
+    it: AsyncIterator,
+    total: int,
+    desc: str = "",
+    size: int = 20,
+    keep: bool = False,
+    file: TextIO = sys.stderr,
+):
+    def show(j):
+        n = int(size * j / total)
+        file.write(f"{desc}[{'=' * n}{'-' * (size - n)}] {j}/{total} {int(100 * j / total)}%\r")
+        file.flush()
+
+    i = 0
+    show(i)
+    async for item in it:
+        yield item
+        i += 1
+        show(i)
+
+    file.write("\n" if keep else "\r")
+    file.flush()
+
+
 async def run(path: Path, *, package_filter: List[str], target: VersionPart, timeout: int):
     print("Get requirements with ", colored("conan info", Colors.BOLD), "...", sep="")
-    requirements = await run_info(path, timeout=timeout)
+    info_result = await run_info(path, timeout=timeout)
+    logger.debug("Conan info result: %s", info_result)
+    if info_result.output:
+        print(colored(info_result.output, Colors.ORANGE))
+
+    requirements = [*info_result.requires, *info_result.build_requires]
     refs = [parse_recipe_reference(r) for r in requirements]
     refs_filtered = [ref for ref in refs if matches_any(ref.package, *package_filter)]
 
     print("Find available versions with ", colored("conan search", Colors.BOLD), "...", sep="")
-    results = await run_search_versions_parallel(refs_filtered, timeout=timeout)
-    logger.debug("conan search results: %s", results)
+    results = [
+        result
+        async for result in async_progressbar(
+            run_search_versions_parallel(refs_filtered, timeout=timeout),
+            total=len(refs_filtered),
+        )
+    ]
+    logger.debug("Conan search results: %s", results)
 
     cols = {
         "cols_package": max(0, 10, *(len(str(r.ref.package)) for r in results)) + 1,
