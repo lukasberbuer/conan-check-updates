@@ -25,11 +25,8 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(name="mock_process")
-async def fixture_mock_process():
-    with patch(
-        "asyncio.create_subprocess_shell",
-        new=AsyncMock(spec=asyncio.create_subprocess_shell),
-    ) as mock:
+def fixture_mock_process():
+    with patch("asyncio.create_subprocess_shell") as mock:
         process = Mock(spec=asyncio.subprocess.Process)  # pylint: disable=no-member
         mock.return_value = process
         yield process
@@ -52,11 +49,14 @@ async def test_run_info(mock_process):
     mock_process.returncode = 0
 
     result = await run_info(".")
-    assert result == [
+    assert result.reference == "conanfile.txt"
+    assert result.requires == [
         "catch2/2.13.7",
         "fmt/8.0.0",
         "spdlog/1.9.0",
         "nlohmann_json/3.7.3",
+    ]
+    assert result.build_requires == [
         "cmake/3.22.0",
     ]
 

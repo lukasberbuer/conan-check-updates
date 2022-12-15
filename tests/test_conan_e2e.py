@@ -15,10 +15,11 @@ async def test_run_search():
 @pytest.mark.asyncio()
 async def test_run_info():
     cwd = Path(__file__).parent / "conanfile.txt"
-    requirements = await run_info(cwd)
+    result = await run_info(cwd)
 
-    assert len(requirements) == 5
+    assert len(result.requires) == 4
+    assert "fmt/8.0.0" in result.requires
+    assert "spdlog/1.9.0" in result.requires
+    assert "nlohmann_json/3.7.3" in result.requires
 
-    assert "fmt/8.0.0" in requirements
-    assert "spdlog/1.9.0" in requirements
-    assert "nlohmann_json/3.7.3" in requirements
+    assert len(result.build_requires) == 1
