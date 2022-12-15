@@ -3,13 +3,12 @@ from enum import IntEnum
 from functools import total_ordering
 from typing import Optional, Sequence, Union
 
+from semver import SemVer
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
 else:
     from typing_extensions import TypeGuard
-
-from semver import SemVer
 
 
 class VersionError(ValueError):
