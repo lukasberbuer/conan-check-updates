@@ -34,7 +34,7 @@ options:
   --cwd CWD             Path to a folder containing a recipe or to a recipe file directly (conanfile.py or conanfile.txt).
                         (default: .)
   --target {major,minor,patch}
-                        Limit upgrade level: major, minor or patch. (default: major)
+                        Limit update level: major, minor or patch. (default: major)
   --timeout TIMEOUT     Timeout for `conan info|search` in seconds. (default: 30)
   -V, --version         Show the version and exit.
   -h, --help            Show this message and exit.

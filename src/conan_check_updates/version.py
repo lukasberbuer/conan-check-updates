@@ -181,20 +181,20 @@ def version_difference(version1: Version, version2: Version) -> Optional[Version
     return None
 
 
-def find_upgrade(
+def find_update(
     current_version: Union[str, Version],
     versions: Sequence[Union[str, Version]],
     target: VersionPart,
 ) -> Optional[Version]:
-    """Find latest upgrade for given target."""
+    """Find latest update for given target."""
     if not is_semantic_version(current_version):
         return None
 
     versions_semantic = filter(is_semantic_version, versions)
 
-    def is_upgrade(v: Version) -> bool:
+    def is_update(v: Version) -> bool:
         assert is_semantic_version(current_version)
         return v > current_version and (version_difference(current_version, v) or 0) <= target
 
-    versions_upgrade = list(filter(is_upgrade, versions_semantic))
-    return max(versions_upgrade) if versions_upgrade else None
+    versions_update = list(filter(is_update, versions_semantic))
+    return max(versions_update) if versions_update else None

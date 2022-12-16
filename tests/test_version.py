@@ -6,7 +6,7 @@ from conan_check_updates.version import (
     Version,
     VersionError,
     VersionPart,
-    find_upgrade,
+    find_update,
     parse_version,
     version_difference,
 )
@@ -106,10 +106,10 @@ def test_version_difference(version1: str, version2: str, part: VersionPart):
         ("1.0.0", ("2.0.0", "1.1.0", "1.0.1"), VersionPart.PATCH, "1.0.1"),
     ],
 )
-def test_find_upgrade(
+def test_find_update(
     current: str, available: List[str], target: VersionPart, expected: Optional[str]
 ):
     current_version = Version(current)
     versions = [Version(v) for v in available]
     expected_version = Version(expected) if expected else None
-    assert find_upgrade(current_version, versions, target) == expected_version
+    assert find_update(current_version, versions, target) == expected_version

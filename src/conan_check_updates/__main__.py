@@ -9,7 +9,7 @@ from typing import AsyncIterator, List, Optional, Sequence, TextIO, Union
 
 from .conan import TIMEOUT, parse_conan_reference, run_info, run_search_versions_parallel
 from .filter import matches_any
-from .version import Version, VersionPart, find_upgrade, is_semantic_version
+from .version import Version, VersionPart, find_update, is_semantic_version
 
 if sys.version_info >= (3, 8):
     from importlib import metadata
@@ -48,15 +48,15 @@ def highlight_version_diff(version: str, compare: str, highlight=Colors.RED) -> 
     return version[:i_first_diff] + highlight + version[i_first_diff:] + Colors.RESET
 
 
-def upgrade_version_string(
+def update_result_text(
     current_version: Union[str, Version],
-    upgrade_version: Optional[Version],
+    update_version: Optional[Version],
     versions: Sequence[Union[str, Version]],
 ) -> str:
     if not is_semantic_version(current_version):
         return ", ".join(map(str, versions))  # print list of available versions
-    if upgrade_version:
-        return highlight_version_diff(str(upgrade_version), str(current_version))
+    if update_version:
+        return highlight_version_diff(str(update_version), str(current_version))
     return str(current_version)
 
 
@@ -113,9 +113,9 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
 
     for result in sorted(results, key=lambda r: r.ref.package):
         current_version = result.ref.version
-        upgrade_version = find_upgrade(current_version, result.versions, target=target)
+        update_version = find_update(current_version, result.versions, target=target)
 
-        skip = is_semantic_version(current_version) and upgrade_version is None
+        skip = is_semantic_version(current_version) and update_version is None
         if skip:
             continue
 
@@ -123,7 +123,7 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
             format_str.format(
                 result.ref.package,
                 str(current_version),
-                upgrade_version_string(current_version, upgrade_version, result.versions),
+                update_result_text(current_version, update_version, result.versions),
                 **cols,
             )
         )
@@ -183,7 +183,7 @@ def main():
         # metavar="<target>",
         choices=list(target_choices.keys()),
         default="major",
-        help=f"Limit upgrade level: {list_choices(target_choices.keys())}.",
+        help=f"Limit update level: {list_choices(target_choices.keys())}.",
     )
     parser.add_argument(
         "--timeout",
