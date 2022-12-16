@@ -15,12 +15,12 @@ from conan_check_updates.version import (
 @pytest.mark.parametrize(
     ("version", "major", "minor", "patch", "prerelease", "build"),
     [
-        ("1", 1, 0, 0, "", ""),
-        ("1.2", 1, 2, 0, "", ""),
-        ("1.2.3", 1, 2, 3, "", ""),
-        ("1.2.3-rc1", 1, 2, 3, "rc1", ""),
-        ("1.2.3rc1", 1, 2, 3, "rc1", ""),
-        ("1.2.3+1", 1, 2, 3, "", "1"),
+        ("1", 1, 0, 0, None, None),
+        ("1.2", 1, 2, 0, None, None),
+        ("1.2.3", 1, 2, 3, None, None),
+        ("1.2.3-rc1", 1, 2, 3, "rc1", None),
+        ("1.2.3rc1", 1, 2, 3, "rc1", None),
+        ("1.2.3+1", 1, 2, 3, None, "1"),
         ("1.2.3-alpha+001", 1, 2, 3, "alpha", "001"),
     ],
 )
@@ -43,6 +43,27 @@ def test_version(version: str, major: int, minor: int, patch: int, prerelease: s
 def test_invalid_version(version: str):
     with pytest.raises(VersionError):
         Version(version)
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "cmp", "expected"),
+    [
+        ("1.0.0", "1.0.0", "__eq__", True),
+        ("1.0.0", "1.0.1", "__eq__", False),
+        ("1.0.0-alpha", "1.0.0-alpha.1", "__lt__", True),
+        ("1.0.0-alpha.1", "1.0.0-alpha.beta", "__lt__", True),
+        ("1.0.0-alpha.beta", "1.0.0-beta", "__lt__", True),
+        ("1.0.0-beta", "1.0.0-beta.2", "__lt__", True),
+        ("1.0.0-beta.2", "1.0.0-beta.11", "__lt__", True),
+        ("1.0.0-rc.1", "1.0.0", "__lt__", True),
+        ("1.0.0", "1.0.1", "__lt__", True),
+    ],
+)
+def test_compare_versions(left: str, right: str, cmp: str, expected: bool):
+    v_left = Version(left)
+    v_right = Version(right)
+    func = getattr(v_left, cmp)
+    assert func(v_right) == expected
 
 
 @pytest.mark.parametrize(
