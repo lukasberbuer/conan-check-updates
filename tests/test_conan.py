@@ -12,16 +12,36 @@ import pytest
 from conan_check_updates.conan import (
     ConanError,
     ConanReference,
+    find_conanfile,
     parse_conan_reference,
     run_info,
     run_search,
 )
 from conan_check_updates.version import Version
 
-pytestmark = pytest.mark.skipif(
+asyncmock_required = pytest.mark.skipif(
     sys.version_info < (3, 8),
     reason="Python 3.8 required for AsyncMock mocking",
 )
+
+
+@pytest.mark.parametrize("conanfile", ["conanfile.py", "conanfile.txt"])
+def test_find_conanfile(tmp_path, conanfile):
+    conanfile_path = tmp_path / conanfile
+
+    with pytest.raises(ValueError, match="Could not find conanfile in path"):
+        find_conanfile(tmp_path)
+    with pytest.raises(ValueError, match="Invalid path"):
+        find_conanfile(conanfile_path)
+
+    conanfile_path.touch()  # create conanfile
+
+    result_path = find_conanfile(tmp_path)
+    result_file = find_conanfile(conanfile_path)
+
+    assert result_path.name == conanfile
+    assert result_path.name == conanfile
+    assert result_path == result_file
 
 
 @pytest.fixture(name="mock_process")
@@ -41,6 +61,7 @@ Version ranges solved
 """  # noqa: E501
 
 
+@asyncmock_required
 @pytest.mark.asyncio()
 async def test_run_info(mock_process):
     stdout = CONAN_INFO_RESPONE
@@ -77,6 +98,7 @@ def test_recipe_reference_parse_version_post_init():
     assert ConanReference("pkg", "0.1.0") == ConanReference("pkg", Version("0.1.0"))
 
 
+@asyncmock_required
 @pytest.mark.asyncio()
 async def test_run_search(mock_process):
     stdout = b"Remote 'conancenter':\r\n" b"fmt/5.3.0\r\n" b"fmt/6.0.0\r\n" b"fmt/6.1.0\r\n"
@@ -92,6 +114,7 @@ async def test_run_search(mock_process):
     assert refs[2] == ConanReference("fmt", Version("6.1.0"))
 
 
+@asyncmock_required
 @pytest.mark.asyncio()
 async def test_run_search_no_results(mock_process):
     mock_process.communicate = AsyncMock(return_value=(b"", b""))
@@ -101,6 +124,7 @@ async def test_run_search_no_results(mock_process):
     assert len(refs) == 0
 
 
+@asyncmock_required
 @pytest.mark.asyncio()
 async def test_run_search_fail(mock_process):
     mock_process.communicate = AsyncMock(return_value=(b"", b"Error..."))

@@ -19,6 +19,21 @@ class ConanError(RuntimeError):
     """Raised when the Conan CLI returns an error."""
 
 
+def find_conanfile(path: Path) -> Path:
+    """Find conanfile.py/conanfile.txt in given path."""
+    filenames = ("conanfile.py", "conanfile.txt")  # prefer conanfile.py
+    if path.is_file():
+        if path.name in filenames:
+            return path
+        raise ValueError(f"Path is not a conanfile: {str(path)}")
+    if path.is_dir():
+        for filepath in [path / filename for filename in filenames]:
+            if filepath.exists():
+                return filepath
+        raise ValueError(f"Could not find conanfile in path: {str(path)}")
+    raise ValueError(f"Invalid path: {str(path)}")
+
+
 async def _run_capture_stdout(cmd: str, timeout: Optional[int] = TIMEOUT) -> bytes:
     """
     Run process asynchronously and capture stdout.

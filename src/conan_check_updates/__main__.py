@@ -7,7 +7,13 @@ import sys
 from pathlib import Path
 from typing import AsyncIterator, List, Optional, Sequence, TextIO, Union
 
-from .conan import TIMEOUT, parse_conan_reference, run_info, run_search_versions_parallel
+from .conan import (
+    TIMEOUT,
+    find_conanfile,
+    parse_conan_reference,
+    run_info,
+    run_search_versions_parallel,
+)
 from .filter import matches_any
 from .version import Version, VersionPart, find_update, is_semantic_version
 
@@ -85,14 +91,16 @@ async def async_progressbar(
 
 
 async def run(path: Path, *, package_filter: List[str], target: VersionPart, timeout: int):
+    conanfile = find_conanfile(path)
+    print("Checking", colored(str(conanfile), Colors.BOLD))
+
     print("Get requirements with ", colored("conan info", Colors.BOLD), "...", sep="")
-    info_result = await run_info(path, timeout=timeout)
+    info_result = await run_info(conanfile, timeout=timeout)
     logger.debug("Conan info result: %s", info_result)
     if info_result.output:
         print(colored(info_result.output, Colors.ORANGE))
 
-    requirements = [*info_result.requires, *info_result.build_requires]
-    refs = [parse_conan_reference(r) for r in requirements]
+    refs = map(parse_conan_reference, (*info_result.requires, *info_result.build_requires))
     refs_filtered = [ref for ref in refs if matches_any(ref.package, *package_filter)]
 
     print("Find available versions with ", colored("conan search", Colors.BOLD), "...", sep="")
@@ -170,7 +178,7 @@ def main():
         "--cwd",
         dest="cwd",
         # metavar="<path>",
-        type=lambda p: Path(p).resolve(),
+        type=Path,
         default=Path("."),
         help=(
             "Path to a folder containing a recipe or to a recipe file directly "
