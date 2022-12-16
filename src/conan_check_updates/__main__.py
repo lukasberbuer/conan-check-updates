@@ -111,7 +111,7 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
     }
     format_str = "{:<{cols_package}} {:>{cols_version}}  \u2192  {}"
 
-    for result in results:
+    for result in sorted(results, key=lambda r: r.ref.package):
         current_version = result.ref.version
         upgrade_version = find_upgrade(current_version, result.versions, target=target)
 
