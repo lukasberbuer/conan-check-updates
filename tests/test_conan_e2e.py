@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 
-from conan_check_updates.conan import RecipeReference, run_info, run_search
+from conan_check_updates.conan import ConanReference, run_info, run_search
 
 
 @pytest.mark.asyncio()
 async def test_run_search():
     refs = await run_search("fmt")
     assert len(refs) > 0
-    assert RecipeReference("fmt", "8.0.0") in refs
+    assert ConanReference("fmt", "8.0.0") in refs
 
 
 @pytest.mark.asyncio()

@@ -16,7 +16,7 @@ if sys.platform == "win32":
 
 
 class ConanError(RuntimeError):
-    pass
+    """Raised when the Conan CLI returns an error."""
 
 
 async def _run_capture_stdout(cmd: str, timeout: Optional[int] = TIMEOUT) -> bytes:
@@ -88,8 +88,8 @@ async def run_info(path: Union[str, Path], timeout: Optional[int] = TIMEOUT) -> 
 
 
 @dataclass
-class RecipeReference:
-    """Parsed recipe identifier of the form `name/version@user/channel`."""
+class ConanReference:
+    """Parsed Conan reference of the form `name/version@user/channel`."""
 
     package: str
     version: Union[str, Version]
@@ -101,12 +101,12 @@ class RecipeReference:
             self.version = parse_version(self.version)
 
 
-def parse_recipe_reference(reference: str) -> RecipeReference:
-    """Parse recipe reference."""
+def parse_conan_reference(reference: str) -> ConanReference:
+    """Parse Conan reference."""
     package_version, _, user_channel = reference.partition("@")
     package, _, version = package_version.partition("/")
     user, _, channel = user_channel.partition("/")
-    return RecipeReference(
+    return ConanReference(
         package,
         parse_version(version),
         user if user else None,
@@ -120,7 +120,7 @@ async def run_search(
     channel: Optional[str] = None,
     *,
     timeout: Optional[int] = TIMEOUT,
-) -> List[RecipeReference]:
+) -> List[ConanReference]:
     """Search available recipes on all remotes with `conan search`."""
     stdout = await _run_capture_stdout(
         f'conan search "{package}/*" --remote all --raw',
@@ -129,19 +129,19 @@ async def run_search(
 
     lines = stdout.decode().splitlines()
     lines_filtered = filter(lambda line: not line.startswith("Remote "), lines)
-    refs = map(parse_recipe_reference, lines_filtered)
+    refs = map(parse_conan_reference, lines_filtered)
     refs_filtered = filter(lambda ref: ref.user == user and ref.channel == channel, refs)
     return list(refs_filtered)
 
 
 @dataclass
 class VersionSearchResult:
-    ref: RecipeReference
+    ref: ConanReference
     versions: List[Union[str, Version]]
 
 
 async def run_search_versions(
-    ref: RecipeReference,
+    ref: ConanReference,
     *,
     timeout: Optional[int] = TIMEOUT,
 ) -> VersionSearchResult:
@@ -156,7 +156,7 @@ async def run_search_versions(
 
 
 async def run_search_versions_parallel(
-    refs: List[RecipeReference],
+    refs: List[ConanReference],
     *,
     timeout: int = TIMEOUT,
 ) -> AsyncIterator[VersionSearchResult]:

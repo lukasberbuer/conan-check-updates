@@ -11,8 +11,8 @@ import pytest
 
 from conan_check_updates.conan import (
     ConanError,
-    RecipeReference,
-    parse_recipe_reference,
+    ConanReference,
+    parse_conan_reference,
     run_info,
     run_search,
 )
@@ -64,17 +64,17 @@ async def test_run_info(mock_process):
 @pytest.mark.parametrize(
     ("reference", "parsed"),
     [
-        ("pkg/0.1.0", RecipeReference("pkg", Version("0.1.0"))),
-        ("pkg/0.1.0@user/stable", RecipeReference("pkg", Version("0.1.0"), "user", "stable")),
+        ("pkg/0.1.0", ConanReference("pkg", Version("0.1.0"))),
+        ("pkg/0.1.0@user/stable", ConanReference("pkg", Version("0.1.0"), "user", "stable")),
     ],
 )
 def test_parse_recipe_reference(reference, parsed):
-    assert parse_recipe_reference(reference) == parsed
+    assert parse_conan_reference(reference) == parsed
 
 
 def test_recipe_reference_parse_version_post_init():
-    assert isinstance(RecipeReference("pkg", "0.1.0").version, Version)
-    assert RecipeReference("pkg", "0.1.0") == RecipeReference("pkg", Version("0.1.0"))
+    assert isinstance(ConanReference("pkg", "0.1.0").version, Version)
+    assert ConanReference("pkg", "0.1.0") == ConanReference("pkg", Version("0.1.0"))
 
 
 @pytest.mark.asyncio()
@@ -87,9 +87,9 @@ async def test_run_search(mock_process):
     refs = await run_search("fmt")
 
     assert len(refs) == 3
-    assert refs[0] == RecipeReference("fmt", Version("5.3.0"))
-    assert refs[1] == RecipeReference("fmt", Version("6.0.0"))
-    assert refs[2] == RecipeReference("fmt", Version("6.1.0"))
+    assert refs[0] == ConanReference("fmt", Version("5.3.0"))
+    assert refs[1] == ConanReference("fmt", Version("6.0.0"))
+    assert refs[2] == ConanReference("fmt", Version("6.1.0"))
 
 
 @pytest.mark.asyncio()

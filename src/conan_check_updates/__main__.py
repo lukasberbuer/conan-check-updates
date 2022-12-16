@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import AsyncIterator, List, Optional, Sequence, TextIO, Union
 
-from .conan import TIMEOUT, parse_recipe_reference, run_info, run_search_versions_parallel
+from .conan import TIMEOUT, parse_conan_reference, run_info, run_search_versions_parallel
 from .filter import matches_any
 from .version import Version, VersionPart, find_upgrade, is_semantic_version
 
@@ -92,7 +92,7 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
         print(colored(info_result.output, Colors.ORANGE))
 
     requirements = [*info_result.requires, *info_result.build_requires]
-    refs = [parse_recipe_reference(r) for r in requirements]
+    refs = [parse_conan_reference(r) for r in requirements]
     refs_filtered = [ref for ref in refs if matches_any(ref.package, *package_filter)]
 
     print("Find available versions with ", colored("conan search", Colors.BOLD), "...", sep="")
