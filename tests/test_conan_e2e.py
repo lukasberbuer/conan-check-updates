@@ -15,7 +15,11 @@ async def test_run_search():
 @pytest.mark.asyncio()
 async def test_run_info():
     cwd = Path(__file__).parent / "conanfile.txt"
-    result = await run_info(cwd)
+    # increase timeout for CI because it takes time on clean systems:
+    # - initialize default profile
+    # - create remotes registry file
+    # - fetch recipes from remote
+    result = await run_info(cwd, timeout=60)
 
     assert len(result.requires) == 4
     assert "fmt/8.0.0" in result.requires
