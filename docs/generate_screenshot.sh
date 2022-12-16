@@ -11,11 +11,12 @@ then
 fi
 
 exe="conan-check-updates"
+exe_win="${exe}.exe"
 
 # use windows binary if avaiable (wsl)
-if [ -x "$(command -v conan-check-updates.exe)" ]; then
+if [ -x "$(command -v $exe_win)" ]; then
     echo "Windows executable found"
-    exe="conan-check-updates.exe"
+    exe=$exe_win
 fi
 
 echo "

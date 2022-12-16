@@ -7,7 +7,7 @@
 
 Check for updates of your `conanfile.txt` / `conanfile.py` requirements.
 
-![Screenshot](docs/screenshot.png)
+![Screenshot](https://github.com/lukasberbuer/conan-check-updates/blob/master/docs/screenshot.png)
 
 ## Installation
 
