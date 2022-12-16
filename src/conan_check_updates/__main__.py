@@ -2,7 +2,6 @@
 
 import argparse
 import asyncio
-import logging
 import sys
 from pathlib import Path
 from typing import AsyncIterator, List, Optional, Sequence, TextIO, Union
@@ -21,8 +20,6 @@ if sys.version_info >= (3, 8):
     from importlib import metadata
 else:
     import importlib_metadata as metadata
-
-logger = logging.getLogger(__name__)
 
 
 class Colors:  # pylint: disable=too-few-public-methods
@@ -96,7 +93,6 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
 
     print("Get requirements with ", colored("conan info", Colors.BOLD), "...", sep="")
     info_result = await run_info(conanfile, timeout=timeout)
-    logger.debug("Conan info result: %s", info_result)
     if info_result.output:
         print(colored(info_result.output, Colors.ORANGE))
 
@@ -111,7 +107,6 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
             total=len(refs_filtered),
         )
     ]
-    logger.debug("Conan search results: %s", results)
 
     cols = {
         "cols_package": max(0, 10, *(len(str(r.ref.package)) for r in results)) + 1,
@@ -215,16 +210,6 @@ def main():
     )
 
     args = parser.parse_args()
-    logger.debug("CLI args: %s", args)
-
-    logging.basicConfig(
-        level=logging.INFO,
-        # format="[%(levelname)s] %(asctime)s: %(message)s",
-        format="[%(levelname)s] %(message)s",
-        datefmt="%d.%m.%Y %H:%M:%S",
-    )
-    logging.getLogger("asyncio").setLevel(logging.INFO)
-    logging.getLogger("semver").setLevel(logging.INFO)
 
     try:
         loop = asyncio.get_event_loop()
