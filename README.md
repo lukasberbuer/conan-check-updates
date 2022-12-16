@@ -7,14 +7,16 @@
 
 Check for updates of your `conanfile.txt` / `conanfile.py` requirements.
 
-![Screenshot](https://github.com/lukasberbuer/conan-check-updates/blob/master/docs/screenshot.png)
+![Screenshot](https://raw.githubusercontent.com/lukasberbuer/conan-check-updates/master/docs/screenshot.png)
+
+This application is heavily inspired by [npm-check-updates](https://github.com/raineorshine/npm-check-updates).
 
 ## Installation
 
 Install the latest version from PyPI:
 
-```shell
-$ pip install -U conan-check-updates
+```
+pip install -U conan-check-updates
 ```
 
 ## Usage
@@ -45,17 +47,17 @@ Just [create an issue](https://github.com/lukasberbuer/conan-check-updates/issue
 
 ### Development setup
 
-```shell
-Clone repository
-$ git clone https://github.com/lukasberbuer/conan-check-updates.git
-$ cd conan-check-updates
+```sh
+# Clone repository
+git clone https://github.com/lukasberbuer/conan-check-updates.git
+cd conan-check-updates
 
-Install package and development tools
-$ pip install -e .[dev]
+# Install package and development tools
+pip install -e .[dev]
 
-Install the git hook scripts
-$ pre-commit install
+# Install the git hook scripts
+pre-commit install
 
-Run checks & tests with tox
-$ tox
+# Run checks & tests with tox
+tox
 ```
