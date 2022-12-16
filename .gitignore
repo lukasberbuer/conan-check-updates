@@ -1,24 +1,24 @@
-# Editor
+# editor
 .vscode/
 .idea/
 .ipynb*
 *.ipynb
 
-# Virtual environments
+# virtual environments
 .envrc
 .direnv/
-.venv/
-venv/
+.venv*/
+venv*/
 
-# Byte-compiled / optimized / DLL files
+# byte-compiled / optimized / DLL files
 __pycache__/
 
-# Distribution / packaging
+# distribution / packaging
 dist/
 pip-wheel-metadata/
 *.egg-info/
 
-# Test / coverage reports
+# test / coverage reports
 htmlcov/
 .tox/
 .coverage
@@ -26,11 +26,9 @@ htmlcov/
 .cache
 coverage.xml
 *.cover
+.mypy_cache/
 .pytest_cache/
 
-# Tools
-.mypy_cache
-
-# Sphinx
-docs/_build/
-docs/generated/
+# misc
+docs/termshot*
+docs/conanfile*

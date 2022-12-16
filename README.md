@@ -5,30 +5,57 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/conan-check-updates)](https://pypi.org/project/conan-check-updates)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Update conanfile.txt/conanfile.py requirements to latest versions.
+Check for updates of your `conanfile.txt` / `conanfile.py` requirements.
+
+![Screenshot](docs/screenshot.png)
 
 ## Installation
 
 Install the latest version from PyPI:
 
-```
-pip install -U conan-check-updates
-```
-
-## Development setup
-
-After cloning the repository, you can easily install the development environment and tools
-([black](https://github.com/psf/black), [pylint](https://www.pylint.org), [mypy](http://mypy-lang.org), [pytest](https://pytest.org), [tox](https://tox.readthedocs.io))
-with:
-
-```
-git clone https://github.com/lukasberbuer/conan-check-updates.git
-cd conan-check-updates
-pip install -e .[dev]
+```shell
+$ pip install -U conan-check-updates
 ```
 
-And run the checks & tests with tox:
+## Usage
 
 ```
-tox
+usage: conan-check-updates [--cwd CWD] [--target {major,minor,patch}] [--timeout TIMEOUT] [-V] [-h] [filter ...]
+
+Check for updates of your conanfile.txt/conanfile.py requirements.
+
+positional arguments:
+  filter                Include only package names matching any of the given strings or patterns. Wildcards (*, ?) are
+                        allowed. Patterns can be inverted with a prepended !, e.g. !boost*. (default: None)
+
+options:
+  --cwd CWD             Path to a folder containing a recipe or to a recipe file directly (conanfile.py or conanfile.txt).
+                        (default: .)
+  --target {major,minor,patch}
+                        Limit upgrade level: major, minor or patch. (default: major)
+  --timeout TIMEOUT     Timeout for `conan info|search` in seconds. (default: 30)
+  -V, --version         Show the version and exit.
+  -h, --help            Show this message and exit.
+```
+
+## Contributing
+
+Contributions are happily accepted.
+Just [create an issue](https://github.com/lukasberbuer/conan-check-updates/issues/new) or make a pull-request.
+
+### Development setup
+
+```shell
+Clone repository
+$ git clone https://github.com/lukasberbuer/conan-check-updates.git
+$ cd conan-check-updates
+
+Install package and development tools
+$ pip install -e .[dev]
+
+Install the git hook scripts
+$ pre-commit install
+
+Run checks & tests with tox
+$ tox
 ```
