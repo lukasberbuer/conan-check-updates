@@ -1,8 +1,11 @@
 import asyncio
 import json
 import re
+import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import AsyncIterator, List, Optional, Union
 
@@ -20,19 +23,50 @@ class ConanError(RuntimeError):
     """Raised when the Conan CLI returns an error."""
 
 
-def find_conanfile(path: Path) -> Path:
-    """Find conanfile.py/conanfile.txt in given path."""
+@dataclass(frozen=True)
+class ConanExecutable:
+    path: Path
+    version: Version
+
+
+@lru_cache(maxsize=1)
+def find_conan() -> ConanExecutable:
+    """Find Conan executable and detect version."""
+    conanexe = shutil.which("conan")
+    if conanexe is None:
+        raise RuntimeError("Conan executable not found")
+
+    def get_version():
+        stdout = subprocess.check_output(f"{conanexe} --version")
+        return parse_version(stdout.split()[-1].decode("utf-8"))
+
+    return ConanExecutable(
+        path=Path(conanexe),
+        version=get_version(),
+    )
+
+
+def find_conanfile(path_or_reference: Path) -> Path:
+    """
+    Find conanfile.py/conanfile.txt.
+
+    Args:
+        path_or_reference: Path to a folder containing a recipe or path to a recipe file
+
+    Raises:
+        ValueError: If conanfile isn't found in given path or if path is invalid
+    """
     filenames = ("conanfile.py", "conanfile.txt")  # prefer conanfile.py
-    if path.is_file():
-        if path.name in filenames:
-            return path
-        raise ValueError(f"Path is not a conanfile: {str(path)}")
-    if path.is_dir():
-        for filepath in [path / filename for filename in filenames]:
+    if path_or_reference.is_file():
+        if path_or_reference.name in filenames:
+            return path_or_reference
+        raise ValueError(f"Path is not a conanfile: {str(path_or_reference)}")
+    if path_or_reference.is_dir():
+        for filepath in (path_or_reference / filename for filename in filenames):
             if filepath.exists():
                 return filepath
-        raise ValueError(f"Could not find conanfile in path: {str(path)}")
-    raise ValueError(f"Invalid path: {str(path)}")
+        raise ValueError(f"Could not find conanfile in path: {str(path_or_reference)}")
+    raise ValueError(f"Invalid path: {str(path_or_reference)}")
 
 
 async def _run_capture_stdout(cmd: str, timeout: Optional[int] = TIMEOUT) -> bytes:

@@ -1,4 +1,5 @@
 import asyncio
+import os
 import sys
 from unittest.mock import Mock, patch
 
@@ -12,6 +13,7 @@ import pytest
 from conan_check_updates.conan import (
     ConanError,
     ConanReference,
+    find_conan,
     find_conanfile,
     parse_conan_reference,
     run_info,
@@ -23,6 +25,22 @@ asyncmock_required = pytest.mark.skipif(
     sys.version_info < (3, 8),
     reason="Python 3.8 required for AsyncMock mocking",
 )
+
+
+def test_find_conan():
+    find_conan.cache_clear()
+    result = find_conan()
+    assert result.path
+    assert result.path.stem.lower() == "conan"
+    assert result.version
+    assert result.version.major in (1, 2)
+
+
+@patch.dict(os.environ, {"PATH": ""})
+def test_find_conan_fail():
+    find_conan.cache_clear()
+    with pytest.raises(RuntimeError, match="Conan executable not found"):
+        find_conan()
 
 
 @pytest.mark.parametrize("conanfile", ["conanfile.py", "conanfile.txt"])
