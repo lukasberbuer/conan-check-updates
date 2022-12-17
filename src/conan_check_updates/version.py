@@ -11,27 +11,25 @@ else:
     from typing_extensions import TypeGuard
 
 # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+_REGEX_SEMVER_CORE = r"0|[1-9]\d*"
+_REGEX_SEMVER_PRERELEASE = r"0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*"
+_REGEX_SEMVER_BUILD = r"[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*"
+
 _PATTERN_SEMVER = re.compile(
-    r"^"
-    r"(?P<major>0|[1-9]\d*)"
-    r"\.(?P<minor>0|[1-9]\d*)"
-    r"\.(?P<patch>0|[1-9]\d*)"
-    r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
-    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
-    r"(?:\+(?P<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?"
-    r"$"
+    rf"(?P<major>{_REGEX_SEMVER_CORE})"
+    rf"\.(?P<minor>{_REGEX_SEMVER_CORE})"
+    rf"\.(?P<patch>{_REGEX_SEMVER_CORE})"
+    rf"(?:-(?P<prerelease>(?:{_REGEX_SEMVER_PRERELEASE})(?:\.(?:{_REGEX_SEMVER_PRERELEASE}))*))?"
+    rf"(?:\+(?P<build>{_REGEX_SEMVER_BUILD}))?"
 )
 
 _PATTERN_SEMVER_LOOSE = re.compile(
-    r"^"
-    r"(?P<major>0|[1-9]\d*)"
-    r"(?:\.(?P<minor>0|[1-9]\d*))?"  # allow empty minor -> 0
-    r"(?:\.(?P<patch>0|[1-9]\d*))?"  # allow empty patch -> 0
+    rf"(?P<major>{_REGEX_SEMVER_CORE})"
+    rf"(?:\.(?P<minor>{_REGEX_SEMVER_CORE}))?"  # allow empty minor -> 0
+    rf"(?:\.(?P<patch>{_REGEX_SEMVER_CORE}))?"  # allow empty patch -> 0
     # allow prerelease without "-", e.g. 0.1.0rc1
-    r"(?:-?(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
-    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
-    r"(?:\+(?P<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?"
-    r"$"
+    rf"(?:-?(?P<prerelease>(?:{_REGEX_SEMVER_PRERELEASE})(?:\.(?:{_REGEX_SEMVER_PRERELEASE}))*))?"
+    rf"(?:\+(?P<build>{_REGEX_SEMVER_BUILD}))?"
 )
 
 
@@ -58,7 +56,7 @@ class Version:
 
     def __init__(self, value: str):
         pattern = _PATTERN_SEMVER_LOOSE if self.loose else _PATTERN_SEMVER
-        match = pattern.match(value)
+        match = pattern.fullmatch(value)
         if not match:
             raise VersionError(f"Invalid semantic version '{value}'") from None
 

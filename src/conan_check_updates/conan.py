@@ -138,11 +138,11 @@ async def run_info(path: Union[str, Path], timeout: Optional[int] = TIMEOUT) -> 
 
 
 # https://docs.conan.io/en/1.55/reference/conanfile/attributes.html#name
+_REGEX_CONAN_ATTR = r"[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{1,50}"
+
 _PATTERN_CONAN_REFERENCE = re.compile(
-    r"^"
-    r"(?P<package>\w[\w\+\.-]+)\/(?P<version>\w[\w\+\.-]+)"
-    r"(?:@(?P<user>\w[\w\+\.-]+)\/(?P<channel>\w[\w\+\.-]+))?"
-    r"$"
+    rf"(?P<package>{_REGEX_CONAN_ATTR})\/(?P<version>{_REGEX_CONAN_ATTR})"
+    rf"(?:@(?P<user>{_REGEX_CONAN_ATTR})\/(?P<channel>{_REGEX_CONAN_ATTR}))?"
 )
 
 
@@ -162,16 +162,10 @@ class ConanReference:
 
 def parse_conan_reference(reference: str) -> ConanReference:
     """Parse Conan reference."""
-    match = _PATTERN_CONAN_REFERENCE.match(reference.strip())
+    match = _PATTERN_CONAN_REFERENCE.fullmatch(reference.strip())
     if not match:
         raise ValueError(f"Invalid Conan reference '{reference}'")
-
-    return ConanReference(
-        match.group("package"),
-        parse_version(match.group("version")),
-        match.group("user") or None,
-        match.group("channel") or None,
-    )
+    return ConanReference(**match.groupdict())
 
 
 async def run_search(
@@ -186,11 +180,10 @@ async def run_search(
         f'conan search "{package}/*" --remote all --raw',
         timeout=timeout,
     )
-
-    lines = stdout.decode().splitlines()
-    lines_stripped = (line.strip() for line in lines)
-    lines_filtered = filter(_PATTERN_CONAN_REFERENCE.match, lines_stripped)
-    refs = map(parse_conan_reference, lines_filtered)
+    refs = (
+        ConanReference(**match.groupdict())
+        for match in _PATTERN_CONAN_REFERENCE.finditer(stdout.decode())
+    )
     refs_filtered = filter(lambda ref: ref.user == user and ref.channel == channel, refs)
     return list(refs_filtered)
 
