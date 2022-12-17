@@ -60,6 +60,7 @@ dev = [
 conan-check-updates = "conan_check_updates.__main__:main"
 
 [project.urls]
+Changelog = "https://github.com/lukasberbuer/conan-check-updates/blob/master/CHANGELOG.md"
 Source = "https://github.com/lukasberbuer/conan-check-updates"
 Issues = "https://github.com/lukasberbuer/conan-check-updates/issues"
 
