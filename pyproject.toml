@@ -42,6 +42,7 @@ tests = [
     "coverage[toml]>=5", # pyproject.toml support
     "pytest>=6", # pyproject.toml support
     "pytest-asyncio",
+    "pytest-rerunfailures",
 ]
 tools = [
     "black",

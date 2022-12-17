@@ -5,6 +5,7 @@ import pytest
 from conan_check_updates.conan import ConanReference, run_info, run_search
 
 
+@pytest.mark.flaky(reruns=3)  # possible timeouts in CI
 @pytest.mark.asyncio()
 async def test_run_search():
     refs = await run_search("fmt")
@@ -12,6 +13,7 @@ async def test_run_search():
     assert ConanReference("fmt", "8.0.0") in refs
 
 
+@pytest.mark.flaky(reruns=3)  # possible timeouts in CI
 @pytest.mark.asyncio()
 async def test_run_info():
     cwd = Path(__file__).parent / "conanfile.txt"
