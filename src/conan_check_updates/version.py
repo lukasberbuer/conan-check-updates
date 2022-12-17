@@ -12,6 +12,7 @@ else:
 
 # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
 _PATTERN_SEMVER = re.compile(
+    r"^"
     r"(?P<major>0|[1-9]\d*)"
     r"\.(?P<minor>0|[1-9]\d*)"
     r"\.(?P<patch>0|[1-9]\d*)"

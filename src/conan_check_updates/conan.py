@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -102,6 +103,15 @@ async def run_info(path: Union[str, Path], timeout: Optional[int] = TIMEOUT) -> 
     )
 
 
+# https://docs.conan.io/en/1.55/reference/conanfile/attributes.html#name
+_PATTERN_CONAN_REFERENCE = re.compile(
+    r"^"
+    r"(?P<package>\w[\w\+\.-]+)\/(?P<version>\w[\w\+\.-]+)"
+    r"(?:@(?P<user>\w[\w\+\.-]+)\/(?P<channel>\w[\w\+\.-]+))?"
+    r"$"
+)
+
+
 @dataclass
 class ConanReference:
     """Parsed Conan reference of the form `name/version@user/channel`."""
@@ -118,14 +128,15 @@ class ConanReference:
 
 def parse_conan_reference(reference: str) -> ConanReference:
     """Parse Conan reference."""
-    package_version, _, user_channel = reference.partition("@")
-    package, _, version = package_version.partition("/")
-    user, _, channel = user_channel.partition("/")
+    match = _PATTERN_CONAN_REFERENCE.match(reference.strip())
+    if not match:
+        raise ValueError(f"Invalid Conan reference '{reference}'")
+
     return ConanReference(
-        package,
-        parse_version(version),
-        user if user else None,
-        channel if channel else None,
+        match.group("package"),
+        parse_version(match.group("version")),
+        match.group("user") or None,
+        match.group("channel") or None,
     )
 
 
@@ -143,7 +154,8 @@ async def run_search(
     )
 
     lines = stdout.decode().splitlines()
-    lines_filtered = filter(lambda line: not line.startswith("Remote "), lines)
+    lines_stripped = (line.strip() for line in lines)
+    lines_filtered = filter(_PATTERN_CONAN_REFERENCE.match, lines_stripped)
     refs = map(parse_conan_reference, lines_filtered)
     refs_filtered = filter(lambda ref: ref.user == user and ref.channel == channel, refs)
     return list(refs_filtered)
