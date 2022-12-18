@@ -216,7 +216,7 @@ async def run_search(
 
 
 @dataclass(frozen=True)
-class VersionSearchResult:
+class ConanSearchVersionsResult:
     ref: ConanReference
     versions: List[Union[str, Version]]
 
@@ -225,10 +225,10 @@ async def run_search_versions(
     ref: ConanReference,
     *,
     timeout: Optional[int] = TIMEOUT,
-) -> VersionSearchResult:
+) -> ConanSearchVersionsResult:
     try:
         refs = await run_search(ref.package, user=ref.user, channel=ref.channel, timeout=timeout)
-        return VersionSearchResult(
+        return ConanSearchVersionsResult(
             ref=ref,
             versions=[r.version for r in refs],  # type: ignore
         )
@@ -240,7 +240,7 @@ async def run_search_versions_parallel(
     refs: List[ConanReference],
     *,
     timeout: int = TIMEOUT,
-) -> AsyncIterator[VersionSearchResult]:
+) -> AsyncIterator[ConanSearchVersionsResult]:
     coros = asyncio.as_completed(
         [run_search_versions(ref, timeout=None) for ref in refs],
         timeout=timeout,  # use global timeout, disable timeout of single searches
