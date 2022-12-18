@@ -15,7 +15,6 @@ from conan_check_updates.conan import (
     ConanReference,
     find_conan,
     find_conanfile,
-    parse_conan_reference,
     run_info,
     run_search,
 )
@@ -62,6 +61,30 @@ def test_find_conanfile(tmp_path, conanfile):
     assert result_path == result_file
 
 
+@pytest.mark.parametrize(
+    ("reference", "package", "version", "user", "channel"),
+    [
+        ("pkg/0.1.0", "pkg", Version("0.1.0"), None, None),
+        ("pkg/0.1.0@user/stable", "pkg", Version("0.1.0"), "user", "stable"),
+    ],
+)
+def test_parse_conan_reference(reference, package, version, user, channel):
+    result = ConanReference(reference)
+    assert result.package == package
+    assert result.version == version
+    assert result.user == user
+    assert result.channel == channel
+
+
+@pytest.mark.parametrize(
+    "invalid_reference",
+    ["x", "x/1.0.0", "xyz/1.0.0@user", "xyz/1.0.0@a/b"],
+)
+def test_validate_conan_reference(invalid_reference):
+    with pytest.raises(ValueError, match="Invalid Conan reference"):
+        ConanReference(invalid_reference)
+
+
 @pytest.fixture(name="mock_process")
 def fixture_mock_process():
     with patch("asyncio.create_subprocess_shell") as mock:
@@ -100,22 +123,6 @@ async def test_run_info(mock_process):
     ]
 
 
-def test_conan_reference_post_init():
-    assert isinstance(ConanReference("pkg", "0.1.0").version, Version)
-    assert ConanReference("pkg", "0.1.0") == ConanReference("pkg", Version("0.1.0"))
-
-
-@pytest.mark.parametrize(
-    ("reference", "parsed"),
-    [
-        ("pkg/0.1.0", ConanReference("pkg", Version("0.1.0"))),
-        ("pkg/0.1.0@user/stable", ConanReference("pkg", Version("0.1.0"), "user", "stable")),
-    ],
-)
-def test_parse_conan_reference(reference, parsed):
-    assert parse_conan_reference(reference) == parsed
-
-
 # Conan v1: conan search --remote all --raw fmt
 CONAN_V1_SEARCH_STDOUT = b"""
 Remote 'conancenter':
@@ -150,9 +157,9 @@ async def test_run_search(mock_process, response):
     refs = await run_search("fmt")
 
     assert len(refs) == 3
-    assert refs[0] == ConanReference("fmt", Version("5.3.0"))
-    assert refs[1] == ConanReference("fmt", Version("6.0.0"))
-    assert refs[2] == ConanReference("fmt", Version("6.1.0"))
+    assert refs[0] == ConanReference("fmt/5.3.0")
+    assert refs[1] == ConanReference("fmt/6.0.0")
+    assert refs[2] == ConanReference("fmt/6.1.0")
 
 
 @asyncmock_required

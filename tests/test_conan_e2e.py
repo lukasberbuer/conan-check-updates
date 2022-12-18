@@ -10,7 +10,7 @@ from conan_check_updates.conan import ConanReference, run_info, run_search
 async def test_run_search():
     refs = await run_search("fmt")
     assert len(refs) > 0
-    assert ConanReference("fmt", "8.0.0") in refs
+    assert ConanReference("fmt/8.0.0") in refs
 
 
 @pytest.mark.flaky(reruns=3)  # possible timeouts in CI
