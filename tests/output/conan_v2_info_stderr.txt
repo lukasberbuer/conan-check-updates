@@ -1,0 +1,84 @@
+
+-------- Input profiles --------
+Profile host:
+[settings]
+arch=x86_64
+build_type=Release
+compiler=clang
+compiler.cppstd=gnu14
+compiler.runtime=dynamic
+compiler.runtime_type=Release
+compiler.runtime_version=v143
+compiler.version=15
+os=Windows
+
+Profile build:
+[settings]
+arch=x86_64
+build_type=Release
+compiler=clang
+compiler.cppstd=gnu14
+compiler.runtime=dynamic
+compiler.runtime_type=Release
+compiler.runtime_version=v143
+compiler.version=15
+os=Windows
+
+
+-------- Computing dependency graph --------
+Graph root
+    conanfile.py: C:\Dev\conan-check-updates\tests\conanfile.py
+Requirements
+    boost/1.79.0#bc3dc5815d772ce33bf4be792ae599ac - Cache
+    bzip2/1.0.8#464be69744fa6d48ed01928cfe470008 - Cache
+    catch2/3.2.0#4a0a697695acca2605e2819731a146c0 - Cache
+    fmt/9.0.0#b24e4788de34f6a5c0bae05a8b199b52 - Cache
+    nlohmann_json/3.10.0#0bca70ae5ff978fced991b48794eb5e9 - Cache
+    zlib/1.2.13#13c96f538b52e1600c40b88994de240f - Cache
+Build requirements
+    b2/4.9.2#480e6bf84554b0d4f68334d50853d283 - Cache
+    ninja/1.11.1#a2f0b832705907016f336839f96963f8 - Cache
+Resolved version ranges
+    ninja/[^1.10]: ninja/1.11.1
+
+-------- Computing necessary packages --------
+catch2/3.2.0: Checking 7 compatible configurations:
+catch2/3.2.0: '284b7b50e33b4047ce854211b97ed7511eace8ad': compiler.cppstd=14
+catch2/3.2.0: 'a366e85ddc88ebd92d982adeff1d7e44324a3fe0': compiler.cppstd=17
+catch2/3.2.0: '6011228506d9d86a4842bcbc42ebac1875fc8ad8': compiler.cppstd=gnu17
+catch2/3.2.0: '087741e859d5f860e94e86f8502b36c7d673b20d': compiler.cppstd=20
+catch2/3.2.0: '83588ea4f6e1deb9562acf7b8587d26601a676c4': compiler.cppstd=gnu20
+catch2/3.2.0: '152c73dc33e9583d07baf4629535a900fa2ac2a0': compiler.cppstd=23
+catch2/3.2.0: '05f01971e8061c10b0d03e988deb113941a589d1': compiler.cppstd=gnu23
+fmt/9.0.0: Checking 9 compatible configurations:
+fmt/9.0.0: '4570beaa183322d333a210b9ab9a96abf1871e5d': compiler.cppstd=11
+fmt/9.0.0: '0e521a3bb91daa2d27229075a805755afe65d940': compiler.cppstd=gnu11
+fmt/9.0.0: 'acf49d4e6203690d729a4c79ea5e7c143bcece9e': compiler.cppstd=14
+fmt/9.0.0: '7bc1207ae7b6e389fc3123b2e47832b2fb9e0088': compiler.cppstd=17
+fmt/9.0.0: '1200e80fb033d0d5f83d901326ef8a90169a3c58': compiler.cppstd=gnu17
+fmt/9.0.0: '9c20c34a6a7d575c7cc32c31b1c70c87196b5a04': compiler.cppstd=20
+fmt/9.0.0: '12d24a3464d4d8732eafc26e3f5aeebbf5662c93': compiler.cppstd=gnu20
+fmt/9.0.0: 'c058c8b48b56c96a2c35b76a59a2323dedec9a2d': compiler.cppstd=23
+fmt/9.0.0: '21530ab1b0d80f59368a273d25adc3eb358c317f': compiler.cppstd=gnu23
+ninja/1.11.1: Compatible package ID 723257509aee8a72faf021920c2874abc738e029 equal to the default package ID
+nlohmann_json/3.10.0: Compatible package ID da39a3ee5e6b4b0d3255bfef95601890afd80709 equal to the default package ID
+boost/1.79.0: Checking 9 compatible configurations:
+boost/1.79.0: 'ef3fb15696b846209afcc48d107a9580c01660f1': compiler.cppstd=11
+boost/1.79.0: 'dc0d6edb132e0b071d4c407ac10ceccb78cbab9e': compiler.cppstd=gnu11
+boost/1.79.0: '228b20fa8733d1a0d33b7ca23894c3658efb92fe': compiler.cppstd=14
+boost/1.79.0: 'b49f5f7f408fc9ae8e1bf8aa537e98247e8541b7': compiler.cppstd=17
+boost/1.79.0: 'e642f33da97ab095ddca49f577c61cde3d3947ae': compiler.cppstd=gnu17
+boost/1.79.0: '53e3c1b0d28ccbb5150c8852284d23b1fdab5090': compiler.cppstd=20
+boost/1.79.0: 'cd746bff46fd5bc2712e5e78feb89072e0c51a70': compiler.cppstd=gnu20
+boost/1.79.0: '071425739276b4a75cda99ee1b86eff072bb8087': compiler.cppstd=23
+boost/1.79.0: 'b8cd09b8bd51e1b657f81ff7ac561de2aa72e702': compiler.cppstd=gnu23
+Requirements
+    boost/1.79.0#bc3dc5815d772ce33bf4be792ae599ac:7d52a5068703dac850b376fea76feb802ee0a221 - Missing
+    bzip2/1.0.8#464be69744fa6d48ed01928cfe470008:3594a0c42d7683298c4b654a78e653d87e6f009e - Missing
+    catch2/3.2.0#4a0a697695acca2605e2819731a146c0:aed6279268fc5de6019bc28d60bc8dc3b63cfc4b - Missing
+    fmt/9.0.0#b24e4788de34f6a5c0bae05a8b199b52:bd20fb4d5fb0d9aa09357b9152cddbc9d1550d5b - Missing
+    nlohmann_json/3.10.0#0bca70ae5ff978fced991b48794eb5e9:da39a3ee5e6b4b0d3255bfef95601890afd80709 - Missing
+    zlib/1.2.13#13c96f538b52e1600c40b88994de240f:c1242107167bc33e52b05abcd4c020933248f924 - Missing
+Build requirements
+    b2/4.9.2#480e6bf84554b0d4f68334d50853d283:522dcea5982a3f8a5b624c16477e47195da2f84f - Skip
+    ninja/1.11.1#a2f0b832705907016f336839f96963f8:723257509aee8a72faf021920c2874abc738e029 - Missing

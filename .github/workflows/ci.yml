@@ -25,8 +25,10 @@ jobs:
         run: tox -e pylint
       - name: Run mypy
         run: tox -e mypy
-      - name: Run pytest
-        run: tox -e py
+      - name: Run pytest (Conan v1)
+        run: tox -e py-v1
+      - name: Run pytest (Conan v2)
+        run: tox -e py-v2
       - name: Coveralls
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.11'
         run: tox -e coveralls

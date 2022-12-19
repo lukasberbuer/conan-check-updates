@@ -6,7 +6,12 @@ import sys
 from pathlib import Path
 from typing import AsyncIterator, List, Optional, Sequence, TextIO, Union
 
-from .conan import TIMEOUT, ConanReference, find_conanfile, run_info, run_search_versions_parallel
+from .conan import (
+    TIMEOUT,
+    find_conanfile,
+    resolve_requirements,
+    search_versions_parallel,
+)
 from .filter import matches_any
 from .version import Version, VersionPart, find_update, is_semantic_version
 
@@ -16,7 +21,9 @@ else:
     import importlib_metadata as metadata
 
 
-class Colors:  # pylint: disable=too-few-public-methods
+class Colors:
+    """ANSI color codes."""
+
     RESET = "\033[0m"
     BOLD = "\033[1m"
     DISABLE = "\033[2m"
@@ -45,7 +52,7 @@ def highlight_version_diff(version: str, compare: str, highlight=Colors.RED) -> 
     return version[:i_first_diff] + highlight + version[i_first_diff:] + Colors.RESET
 
 
-def update_result_text(
+def text_update_column(
     current_version: Union[str, Version],
     update_version: Optional[Version],
     versions: Sequence[Union[str, Version]],
@@ -85,19 +92,15 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
     conanfile = find_conanfile(path)
     print("Checking", colored(str(conanfile), Colors.BOLD))
 
-    print("Get requirements with ", colored("conan info", Colors.BOLD), "...", sep="")
-    info_result = await run_info(conanfile, timeout=timeout)
-    if info_result.output:
-        print(colored(info_result.output, Colors.ORANGE))
-
-    refs = map(ConanReference, (*info_result.requires, *info_result.build_requires))
+    print("Resolve requirements...")
+    refs = await resolve_requirements(conanfile, timeout=timeout)
     refs_filtered = [ref for ref in refs if matches_any(ref.package, *package_filter)]
 
-    print("Find available versions with ", colored("conan search", Colors.BOLD), "...", sep="")
+    print("Search updates...")
     results = [
         result
         async for result in async_progressbar(
-            run_search_versions_parallel(refs_filtered, timeout=timeout),
+            search_versions_parallel(refs_filtered, timeout=timeout),
             total=len(refs_filtered),
         )
     ]
@@ -120,7 +123,7 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
             format_str.format(
                 result.ref.package,
                 str(current_version),
-                update_result_text(current_version, update_version, result.versions),
+                text_update_column(current_version, update_version, result.versions),
                 **cols,
             )
         )

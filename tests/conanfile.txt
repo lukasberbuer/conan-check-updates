@@ -1,11 +1,11 @@
 [requires]
-catch2/[>=2.10]
-fmt/8.0.0
-spdlog/1.9.0
-nlohmann_json/3.7.3
+boost/1.79.0
+catch2/3.2.0
+fmt/9.0.0
+nlohmann_json/3.10.0
 
-[build_requires]
-cmake/[>=3.20]
+[tool_requires]
+ninja/[^1.10]
 
 [generators]
 cmake

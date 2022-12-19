@@ -7,7 +7,9 @@
 
 Check for updates of your `conanfile.txt` / `conanfile.py` requirements.
 
-![Screenshot](https://raw.githubusercontent.com/lukasberbuer/conan-check-updates/master/docs/screenshot.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/lukasberbuer/conan-check-updates/master/docs/screenshot.png" alt="Screenshot" width="500">
+</p>
 
 This application is heavily inspired by [npm-check-updates](https://github.com/raineorshine/npm-check-updates).
 

@@ -38,7 +38,7 @@ dependencies = [
 
 [project.optional-dependencies]
 tests = [
-    "conan>=1.0", # for e2e tests
+    "conan>=1.5", # for e2e tests, >=1.5 due to new [tool_requires] section in conanfile
     "coverage[toml]>=5", # pyproject.toml support
     "pytest>=6", # pyproject.toml support
     "pytest-asyncio",
@@ -70,11 +70,11 @@ line-length = 100
 
 
 [tool.isort]
-line_length = 100
-multi_line_output = 3
-include_trailing_comma = true
-use_parentheses = true
+profile = "black"
 
+
+[tool.pylint.format]
+max-line-length = 100
 
 [tool.pylint.message_control]
 good-names=[
@@ -85,11 +85,12 @@ disable = [
     "missing-module-docstring",
     "missing-class-docstring",
     "missing-function-docstring",
+    "too-few-public-methods",
     "too-many-arguments",
 ]
 
-[tool.pylint.format]
-max-line-length = 100
+[tool.pylint.similarities]
+min-similarity-lines = 6
 
 
 [tool.mypy]
@@ -115,7 +116,13 @@ source = ["src", ".tox/*/site-packages"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = black, isort, pylint, mypy, py37, py38, py39, py310, py311, coverage-report
+envlist =
+    black
+    isort
+    pylint
+    mypy
+    py{37, 38, 39, 310, 311}-{v1, v2}
+    coverage-report
 
 [testenv:black]
 skip_install = true
@@ -134,17 +141,21 @@ commands =
 [testenv:pylint]
 skip_install = true
 deps = pylint
-commands = pylint src/
+commands = pylint ./src/
 
 [testenv:mypy]
 skip_install = true
 deps = mypy>=0.9
 commands =
-    mypy src/
+    mypy ./src/
 
 [testenv]
 extras = tests
+deps =
+    v1: conan<2.0.0
+    v2: conan>=2.0.0b
 commands =
+    v2: - conan profile detect
     coverage run --parallel -m pytest
 
 [testenv:coverage-report]

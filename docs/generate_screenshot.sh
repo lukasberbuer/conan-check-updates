@@ -21,15 +21,10 @@ fi
 
 echo "
 [requires]
-catch2/3.1.0
-fmt/8.0.0
-spdlog/1.9.0
-
-[build_requires]
-cmake/[>=3.20]
-
-[generators]
-cmake
+boost/1.79.0
+catch2/3.2.0
+fmt/9.0.0
+nlohmann_json/3.10.0
 " > conanfile.txt
 
 ./termshot --show-cmd --filename "screenshot.png" -- "$exe"
