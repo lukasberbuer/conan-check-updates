@@ -9,7 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import AsyncIterator, List, Optional, Tuple, Union
 
-from .version import Version, parse_version
+from .version import Version, VersionLike, parse_version
 
 TIMEOUT = 30
 
@@ -238,7 +238,7 @@ async def search(
 @dataclass(frozen=True)
 class ConanSearchVersionsResult:
     ref: ConanReference
-    versions: List[Union[str, Version]]
+    versions: List[VersionLike]
 
 
 async def search_versions(

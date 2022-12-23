@@ -4,7 +4,7 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
-from typing import AsyncIterator, List, Optional, Sequence, TextIO, Union
+from typing import AsyncIterator, List, Optional, Sequence, TextIO
 
 from .conan import (
     TIMEOUT,
@@ -13,7 +13,7 @@ from .conan import (
     search_versions_parallel,
 )
 from .filter import matches_any
-from .version import Version, VersionPart, find_update, is_semantic_version
+from .version import Version, VersionLike, VersionPart, find_update, is_semantic_version
 
 if sys.version_info >= (3, 8):
     from importlib import metadata
@@ -53,9 +53,9 @@ def highlight_version_diff(version: str, compare: str, highlight=Colors.RED) -> 
 
 
 def text_update_column(
-    current_version: Union[str, Version],
+    current_version: VersionLike,
     update_version: Optional[Version],
-    versions: Sequence[Union[str, Version]],
+    versions: Sequence[VersionLike],
 ) -> str:
     if not is_semantic_version(current_version):
         return ", ".join(map(str, versions))  # print list of available versions

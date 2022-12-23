@@ -6,9 +6,9 @@ from itertools import zip_longest
 from typing import Optional, Sequence, Union
 
 if sys.version_info >= (3, 10):
-    from typing import TypeGuard
+    from typing import TypeAlias, TypeGuard
 else:
-    from typing_extensions import TypeGuard
+    from typing_extensions import TypeAlias, TypeGuard
 
 # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
 _REGEX_SEMVER_CORE = r"0|[1-9]\d*"
@@ -144,7 +144,10 @@ class Version:
         return False
 
 
-def parse_version(version: str) -> Union[str, Version]:
+VersionLike: TypeAlias = Union[str, Version]
+
+
+def parse_version(version: str) -> VersionLike:
     """Parse version of conan recipe reference."""
     version = version.strip()
     try:
@@ -153,7 +156,7 @@ def parse_version(version: str) -> Union[str, Version]:
         return version
 
 
-def is_semantic_version(value) -> TypeGuard[Version]:
+def is_semantic_version(value: VersionLike) -> TypeGuard[Version]:
     """Check if value is a semantic version."""
     return isinstance(value, Version)
 
@@ -181,8 +184,8 @@ def version_difference(version1: Version, version2: Version) -> Optional[Version
 
 
 def find_update(
-    current_version: Union[str, Version],
-    versions: Sequence[Union[str, Version]],
+    current_version: VersionLike,
+    versions: Sequence[VersionLike],
     target: VersionPart,
 ) -> Optional[Version]:
     """Find latest update for given target."""
