@@ -70,12 +70,17 @@ def find_conanfile(path: Path) -> Path:
 
 
 # https://docs.conan.io/en/1.55/reference/conanfile/attributes.html#name
-_REGEX_CONAN_ATTRIBUTE = r"[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{1,50}"
+_REGEX_CONAN_ATTRIBUTE_V1 = r"[a-zA-Z0-9_][a-zA-Z0-9_+.-]{1,50}"
+# https://docs.conan.io/en/2.0/reference/conanfile/attributes.html#name
+_REGEX_CONAN_ATTRIBUTE_V2 = r"[a-z0-9_][a-z0-9_+.-]{1,100}"
+_REGEX_CONAN_ATTRIBUTE = rf"(?:{_REGEX_CONAN_ATTRIBUTE_V1})|(?:{_REGEX_CONAN_ATTRIBUTE_V2})"
 
-_PATTERN_CONAN_REFERENCE = re.compile(
+_REGEX_CONAN_REFERENCE = (
     rf"(?P<package>{_REGEX_CONAN_ATTRIBUTE})\/(?P<version>{_REGEX_CONAN_ATTRIBUTE})"
     rf"(?:@(?P<user>{_REGEX_CONAN_ATTRIBUTE})\/(?P<channel>{_REGEX_CONAN_ATTRIBUTE}))?"
 )
+
+_PATTERN_CONAN_REFERENCE = re.compile(_REGEX_CONAN_REFERENCE)
 
 
 class ConanReference:
