@@ -73,8 +73,10 @@ async def async_progressbar(
     file: TextIO = sys.stderr,
 ):
     def show(j):
-        n = int(size * j / total)
-        file.write(f"{desc}[{'=' * n}{'-' * (size - n)}] {j}/{total} {int(100 * j / total)}%\r")
+        assert 0 <= j <= total
+        nbar = int(size * j / total) if total > 0 else size
+        perc = int(100 * j / total) if total > 0 else 100
+        file.write(f"{desc}[{'=' * nbar}{'-' * (size - nbar)}] {j}/{total} {perc}%\r")
         file.flush()
 
     i = 0
