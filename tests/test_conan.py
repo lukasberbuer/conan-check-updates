@@ -20,7 +20,7 @@ from conan_check_updates.conan import (
     search_versions,
     search_versions_parallel,
 )
-from conan_check_updates.version import Version
+from conan_check_updates.version import Version, VersionRange
 
 HERE = Path(__file__).parent
 
@@ -62,6 +62,10 @@ def test_find_conanfile(tmp_path, conanfile):
             None,
             None,
         ),
+        # non-semanic versions
+        ("rapidjson/cci.20220822", "rapidjson", "cci.20220822", None, None, None),
+        # version ranges
+        ("cmake/[^3.10]", "cmake", VersionRange("^3.10"), None, None, None),
     ],
 )
 def test_parse_conan_reference(reference, package, version, revision, user, channel):

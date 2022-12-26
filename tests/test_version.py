@@ -1,3 +1,4 @@
+import random
 from typing import List, Optional
 
 import pytest
@@ -6,29 +7,38 @@ from conan_check_updates.version import (
     Version,
     VersionError,
     VersionPart,
+    VersionRange,
+    VersionRangeCondition,
     find_update,
-    parse_version,
     version_difference,
 )
 
 
 @pytest.mark.parametrize(
-    ("version", "major", "minor", "patch", "prerelease", "build"),
+    ("version", "core", "prerelease", "build", "loose"),
     [
-        ("1", 1, 0, 0, None, None),
-        ("1.2", 1, 2, 0, None, None),
-        ("1.2.3", 1, 2, 3, None, None),
-        ("1.2.3-rc1", 1, 2, 3, "rc1", None),
-        ("1.2.3rc1", 1, 2, 3, "rc1", None),
-        ("1.2.3+1", 1, 2, 3, None, "1"),
-        ("1.2.3-alpha+001", 1, 2, 3, "alpha", "001"),
+        # strict
+        ("1.2.3", (1, 2, 3), None, None, False),
+        ("1.2.3-rc1", (1, 2, 3), "rc1", None, False),
+        ("1.2.3+001", (1, 2, 3), None, "001", False),
+        ("1.2.3-alpha.1+001", (1, 2, 3), "alpha.1", "001", False),
+        # loose
+        ("1", (1, 0, 0), None, None, True),
+        ("1.2", (1, 2, 0), None, None, True),
+        ("1.2.3", (1, 2, 3), None, None, True),
+        ("1.2.3.4", (1, 2, 3), None, None, True),
+        ("1.2.3-", (1, 2, 3), "-", None, True),  # ok?
+        ("1.2.3-rc1", (1, 2, 3), "rc1", None, True),
+        ("1.2.3+0011", (1, 2, 3), None, "0011", True),
+        ("1.2.3-alpha.1+001", (1, 2, 3), "alpha.1", "001", True),
     ],
 )
-def test_version(version: str, major: int, minor: int, patch: int, prerelease: str, build: str):
-    v = Version(version)
-    assert v.major == major
-    assert v.minor == minor
-    assert v.patch == patch
+def test_version(version, core, prerelease, build, loose):
+    v = Version(version, loose=loose)
+    assert v.core == core
+    assert v.major == core[0]
+    assert v.minor == core[1]
+    assert v.patch == core[2]
     assert v.prerelease == prerelease
     assert v.build == build
 
@@ -67,18 +77,85 @@ def test_compare_versions(left: str, right: str, cmp: str, expected: bool):
 
 
 @pytest.mark.parametrize(
-    ("version_str", "expected"),
+    ("expression", "operator", "version", "include_prerelease"),
     [
-        ("0", Version("0.0.0")),
-        ("0.1", Version("0.1.0")),
-        ("0.1.2", Version("0.1.2")),
-        ("0.1.2-rc1", Version("0.1.2-rc1")),
-        ("xyz", "xyz"),
-        ("", ""),
+        ("*", ">=", "0.0.0", False),
+        ("*-", ">=", "0.0.0", True),
+        ("1.0", "=", "1.0.0", False),
+        ("^1.0-", "^", "1.0.0--", True),
+        (">=1.0-rc1", ">=", "1.0.0-rc1", True),
     ],
 )
-def test_parse_version(version_str, expected):
-    assert parse_version(version_str) == expected
+def test_version_range_condition(expression, operator, version, include_prerelease):
+    condition = VersionRangeCondition.parse(expression)
+    assert condition.operator == operator
+    assert condition.version == Version(version, loose=False)
+    assert condition.include_prerelease == include_prerelease
+
+
+@pytest.mark.parametrize(
+    ("version_range_str", "versions_included", "versions_excluded"),
+    [
+        ("1.0.0", ["1.0.0"], ["1.0.1"]),
+        ("=1.0.0", ["1.0.0"], ["1.0.1"]),
+        (">1.0.0", ["1.0.1", "1.1.0", "2.0.0"], ["1.0.0", "0.9.9"]),
+        (">=1.0.0", ["1.0.0", "1.0.1", "1.1.0", "2.0.0"], ["0.9.9"]),
+        ("<1.0.0", ["0.9.9", "0.9.0"], ["1.0.0", "2.0.0"]),
+        ("<=1.0.0", ["1.0.0", "0.9.9", "0.9.0"], ["2.0.0"]),
+        ("~1.2.3", ["1.2.3", "1.2.4"], ["1.3.0", "2.0.0"]),
+        ("^1.2.3", ["1.2.3", "1.2.4", "1.3.0"], ["2.0.0"]),
+        ("^0.1.2", ["0.1.2", "0.1.3"], ["0.2.0", "1.0.0"]),
+        ("^0.0.1", ["0.0.1"], ["0.0.2", "0.1.0", "1.0.0"]),
+        # any
+        ("", ["1.0.0"], []),
+        ("*", ["1.0.0"], []),
+        # sets
+        (">=1.0.0 <2.0.0", ["1.0.0", "1.1.1"], ["2.0.0"]),
+        # unions
+        ("<=1.0.0 || >=1.2.3", ["1.0.0", "1.2.3"], ["1.0.1", "1.2.2"]),
+        # pre-releases
+        ("*, include_prerelease=True", ["1.0", "1.0-pre.1"], []),
+        ("*-", ["1.0", "1.0-pre.1"], []),
+        (">=1-", ["1.0", "1.0-pre.1"], []),
+        (">1- <2.0", ["1.5.1-pre1"], ["2.1-pre1"]),
+        (">1- <2.0 || ^3.2 ", ["1.5-a1", "3.3"], ["3.3-a1"]),
+        ("^1.1.2-", ["1.2.3", "1.2.0-alpha1"], ["2.0.0-alpha1"]),
+        ("~1.1.2-", ["1.1.3", "1.1.3-alpha1"], ["1.2.0-alpha1"]),
+    ],
+)
+def test_version_range(version_range_str, versions_included, versions_excluded):
+    version_range = VersionRange(version_range_str)
+    for v in versions_included:
+        print(version_range, "should include", v)
+        assert version_range.satifies(Version(v))
+    for v in versions_excluded:
+        print(version_range, "should not include", v)
+        assert not version_range.satifies(Version(v))
+
+
+@pytest.mark.parametrize(
+    ("version_range_str", "versions", "expected"),
+    [
+        ("=1.0.0", [], None),
+        ("=1.2.3", ("0.9.0", "0.9.9", "1.0.0", "1.0.1", "1.1.0", "2.0.0"), None),
+        ("=1.0.0", ("0.9.0", "0.9.9", "1.0.0", "1.0.1", "1.1.0", "2.0.0"), "1.0.0"),
+        (">1.0.0", ("0.9.0", "0.9.9", "1.0.0", "1.0.1", "1.1.0", "2.0.0"), "2.0.0"),
+        (">=1 <2", ("0.9.0", "0.9.9", "1.0.0", "1.0.1", "1.1.0", "2.0.0"), "1.1.0"),
+        ("<1.0.0", ("0.9.0", "0.9.9", "1.0.0", "1.0.1", "1.1.0", "2.0.0"), "0.9.9"),
+        ("~1.0.0", ("0.9.0", "0.9.9", "1.0.0", "1.0.1", "1.1.0", "2.0.0"), "1.0.1"),
+        ("~0.9.0", ("0.9.0", "0.9.9", "1.0.0", "1.0.1", "1.1.0", "2.0.0"), "0.9.9"),
+        ("^1.0.0", ("0.9.0", "0.9.9", "1.0.0", "1.0.1", "1.1.0", "2.0.0"), "1.1.0"),
+        ("^0.9.0", ("0.9.0", "0.9.9", "1.0.0", "1.0.1", "1.1.0", "2.0.0"), "0.9.9"),
+        # pre-releases
+        (">=1.0", ("1.0.0", "1.1.0-rc.1", "1.1.0-rc.2"), "1.0.0"),
+        (">=1.0-", ("1.0.0", "1.1.0-rc.1", "1.1.0-rc.2"), "1.1.0-rc.2"),
+    ],
+)
+def test_version_range_max_satifies(version_range_str, versions, expected):
+    version_range = VersionRange(version_range_str)
+    versions = [Version(v) for v in versions]
+    random.shuffle(versions)
+    assert version_range.max_satifies(versions) == expected
 
 
 @pytest.mark.parametrize(

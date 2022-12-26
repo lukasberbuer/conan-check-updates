@@ -9,7 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import AsyncIterator, List, Optional, Tuple, Union
 
-from .version import Version, VersionLike, parse_version
+from .version import Version, VersionError, VersionLikeOrRange, VersionRange
 
 TIMEOUT = 30
 
@@ -38,7 +38,7 @@ def find_conan() -> ConanExecutable:
 
     def get_version():
         stdout = subprocess.check_output(("conan", "--version"))
-        return parse_version(stdout.split()[-1].decode("utf-8"))
+        return Version(stdout.split()[-1].decode("utf-8"))
 
     return ConanExecutable(
         path=Path(conanexe),
@@ -74,11 +74,13 @@ _REGEX_CONAN_ATTRIBUTE_V1 = r"[a-zA-Z0-9_][a-zA-Z0-9_+.-]{1,50}"
 # https://docs.conan.io/en/2.0/reference/conanfile/attributes.html#name
 _REGEX_CONAN_ATTRIBUTE_V2 = r"[a-z0-9_][a-z0-9_+.-]{1,100}"
 _REGEX_CONAN_ATTRIBUTE = rf"{_REGEX_CONAN_ATTRIBUTE_V1}|{_REGEX_CONAN_ATTRIBUTE_V2}"
+_REGEX_CONAN_VERSION_RANGE = r"\[.+\]"
+_REGEX_CONAN_VERSION = rf"{_REGEX_CONAN_ATTRIBUTE}|{_REGEX_CONAN_VERSION_RANGE}"
 _REGEX_CONAN_REVISION_MD5_SHA1 = r"[a-fA-F0-9]{32,40}"
 
 _REGEX_CONAN_REFERENCE = (
     rf"(?P<package>{_REGEX_CONAN_ATTRIBUTE})"
-    rf"\/(?P<version>{_REGEX_CONAN_ATTRIBUTE})"
+    rf"\/(?P<version>{_REGEX_CONAN_VERSION})"
     rf"(?:#(?P<revision>{_REGEX_CONAN_REVISION_MD5_SHA1}))?"  # optional
     rf"(?:@(?P<user>{_REGEX_CONAN_ATTRIBUTE})\/(?P<channel>{_REGEX_CONAN_ATTRIBUTE}))?"  # optional
 )
@@ -87,7 +89,7 @@ _PATTERN_CONAN_REFERENCE = re.compile(_REGEX_CONAN_REFERENCE)
 
 
 class ConanReference:
-    """Conan recipe reference of the form `name/version@user/channel`."""
+    """Conan recipe reference of the form `name/version@user/channel#revision`."""
 
     def __init__(self, reference: str):
         reference = reference.strip()
@@ -98,10 +100,19 @@ class ConanReference:
             raise ValueError(f"Invalid Conan reference '{reference}'")
 
         self._package = match.group("package")
-        self._version = parse_version(match.group("version"))
+        self._version = self._parse_version(match.group("version"), loose=True)
         self._revision = match.group("revision")
         self._user = match.group("user")
         self._channel = match.group("channel")
+
+    @staticmethod
+    def _parse_version(value: str, *, loose: bool) -> VersionLikeOrRange:
+        if value.startswith("[") and value.endswith("]"):
+            return VersionRange(value[1:-1])
+        try:
+            return Version(value, loose=loose)
+        except VersionError:
+            return value
 
     def __str__(self) -> str:
         return self._str
@@ -127,7 +138,7 @@ class ConanReference:
         return self._package
 
     @property
-    def version(self) -> Union[str, Version]:
+    def version(self) -> VersionLikeOrRange:
         return self._version
 
     @property
@@ -254,7 +265,7 @@ async def search(
 @dataclass(frozen=True)
 class ConanSearchVersionsResult:
     ref: ConanReference
-    versions: List[VersionLike]
+    versions: List[VersionLikeOrRange]
 
 
 async def search_versions(
