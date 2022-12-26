@@ -160,18 +160,16 @@ commands =
 [testenv:coverage-report]
 skip_install = true
 deps = coverage[toml]>=5
-passenv = GITHUB_*
 commands =
     - coverage combine
     coverage report
 
 [testenv:coveralls]
 skip_install = true
-deps =
-    coverage[toml]>=5
-    coveralls
+deps = coveralls
 passenv = GITHUB_*
 commands =
     - coverage combine
+    coverage report
     coveralls --service=github
 """
