@@ -52,15 +52,15 @@ class Version:
     Reference: https://semver.org/
     """
 
-    loose = True
+    def __init__(self, value: str, *, loose: bool = True):
+        self._str = value
+        self._loose = loose
 
-    def __init__(self, value: str):
-        pattern = _PATTERN_SEMVER_LOOSE if self.loose else _PATTERN_SEMVER
+        pattern = _PATTERN_SEMVER_LOOSE if loose else _PATTERN_SEMVER
         match = pattern.fullmatch(value)
         if not match:
             raise VersionError(f"Invalid semantic version '{value}'") from None
 
-        self._str = value
         self._major = int(match.group("major"))
         self._minor = int(match.group("minor") or 0)
         self._patch = int(match.group("patch") or 0)

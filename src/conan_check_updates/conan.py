@@ -91,10 +91,12 @@ class ConanReference:
 
     def __init__(self, reference: str):
         reference = reference.strip()
+        self._str = reference
+
         match = _PATTERN_CONAN_REFERENCE.fullmatch(reference)
         if not match:
             raise ValueError(f"Invalid Conan reference '{reference}'")
-        self._str = reference
+
         self._package = match.group("package")
         self._version = parse_version(match.group("version"))
         self._revision = match.group("revision")
