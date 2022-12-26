@@ -50,16 +50,25 @@ def test_find_conanfile(tmp_path, conanfile):
 
 
 @pytest.mark.parametrize(
-    ("reference", "package", "version", "user", "channel"),
+    ("reference", "package", "version", "revision", "user", "channel"),
     [
-        ("pkg/0.1.0", "pkg", Version("0.1.0"), None, None),
-        ("pkg/0.1.0@user/stable", "pkg", Version("0.1.0"), "user", "stable"),
+        ("pkg/0.1.0", "pkg", Version("0.1.0"), None, None, None),
+        ("pkg/0.1.0@user/stable", "pkg", Version("0.1.0"), None, "user", "stable"),
+        (
+            "zlib/1.2.12#87a7211557b6690ef5bf7fc599dd8349",
+            "zlib",
+            Version("1.2.12"),
+            "87a7211557b6690ef5bf7fc599dd8349",
+            None,
+            None,
+        ),
     ],
 )
-def test_parse_conan_reference(reference, package, version, user, channel):
+def test_parse_conan_reference(reference, package, version, revision, user, channel):
     result = ConanReference(reference)
     assert result.package == package
     assert result.version == version
+    assert result.revision == revision
     assert result.user == user
     assert result.channel == channel
 

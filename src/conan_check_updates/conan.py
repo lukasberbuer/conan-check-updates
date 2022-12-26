@@ -73,11 +73,14 @@ def find_conanfile(path: Path) -> Path:
 _REGEX_CONAN_ATTRIBUTE_V1 = r"[a-zA-Z0-9_][a-zA-Z0-9_+.-]{1,50}"
 # https://docs.conan.io/en/2.0/reference/conanfile/attributes.html#name
 _REGEX_CONAN_ATTRIBUTE_V2 = r"[a-z0-9_][a-z0-9_+.-]{1,100}"
-_REGEX_CONAN_ATTRIBUTE = rf"(?:{_REGEX_CONAN_ATTRIBUTE_V1})|(?:{_REGEX_CONAN_ATTRIBUTE_V2})"
+_REGEX_CONAN_ATTRIBUTE = rf"{_REGEX_CONAN_ATTRIBUTE_V1}|{_REGEX_CONAN_ATTRIBUTE_V2}"
+_REGEX_CONAN_REVISION_MD5_SHA1 = r"[a-fA-F0-9]{32,40}"
 
 _REGEX_CONAN_REFERENCE = (
-    rf"(?P<package>{_REGEX_CONAN_ATTRIBUTE})\/(?P<version>{_REGEX_CONAN_ATTRIBUTE})"
-    rf"(?:@(?P<user>{_REGEX_CONAN_ATTRIBUTE})\/(?P<channel>{_REGEX_CONAN_ATTRIBUTE}))?"
+    rf"(?P<package>{_REGEX_CONAN_ATTRIBUTE})"
+    rf"\/(?P<version>{_REGEX_CONAN_ATTRIBUTE})"
+    rf"(?:#(?P<revision>{_REGEX_CONAN_REVISION_MD5_SHA1}))?"  # optional
+    rf"(?:@(?P<user>{_REGEX_CONAN_ATTRIBUTE})\/(?P<channel>{_REGEX_CONAN_ATTRIBUTE}))?"  # optional
 )
 
 _PATTERN_CONAN_REFERENCE = re.compile(_REGEX_CONAN_REFERENCE)
@@ -94,6 +97,7 @@ class ConanReference:
         self._str = reference
         self._package = match.group("package")
         self._version = parse_version(match.group("version"))
+        self._revision = match.group("revision")
         self._user = match.group("user")
         self._channel = match.group("channel")
 
@@ -110,6 +114,7 @@ class ConanReference:
             (
                 self.package == other.package,
                 self.version == other.version,
+                self.revision == other.revision,
                 self.user == other.user,
                 self.channel == other.channel,
             )
@@ -122,6 +127,10 @@ class ConanReference:
     @property
     def version(self) -> Union[str, Version]:
         return self._version
+
+    @property
+    def revision(self) -> Optional[str]:
+        return self._revision
 
     @property
     def user(self) -> Optional[str]:
