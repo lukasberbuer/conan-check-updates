@@ -1,4 +1,5 @@
 import asyncio
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -14,8 +15,8 @@ from conan_check_updates.conan import (
     ConanError,
     ConanReference,
     find_conanfile,
-    resolve_requirements_v1,
-    resolve_requirements_v2,
+    inspect_requires_conanfile_py,
+    inspect_requires_conanfile_txt,
     search,
     search_versions,
     search_versions_parallel,
@@ -88,41 +89,64 @@ def test_validate_conan_reference(invalid_reference):
 
 @pytest.fixture(name="mock_process")
 def fixture_mock_process():
+    with patch("subprocess.run") as mock:
+        process = Mock(spec=subprocess.CompletedProcess)  # pylint: disable=no-member
+        process.configure_mock(args=[], returncode=0, stdout=b"", stderr=b"")
+        mock.return_value = process
+        yield process
+
+
+@pytest.fixture(name="mock_process_async")
+def fixture_mock_process_async():
     with patch("asyncio.create_subprocess_shell") as mock:
         process = Mock(spec=asyncio.subprocess.Process)  # pylint: disable=no-member
         mock.return_value = process
         yield process
 
 
-@asyncmock_required
-@pytest.mark.asyncio()
+@pytest.fixture(name="mock_conan_version")
+def _fixture_mock_conan_version():
+    with patch("conan_check_updates.conan.conan_version") as mock:
+        mock.return_value = Version("2.0.0")
+        yield
+
+
 @pytest.mark.parametrize(
-    ("func", "stdout", "stderr"),
+    ("stdout", "stderr"),
     [
         (
-            resolve_requirements_v1,
-            (HERE / "output" / "conan_v1_info_stdout.txt").read_bytes(),
-            (HERE / "output" / "conan_v1_info_stderr.txt").read_bytes(),
+            (HERE / "output" / "conan_v1_inspect_stdout.txt").read_bytes(),
+            (HERE / "output" / "conan_v1_inspect_stderr.txt").read_bytes(),
         ),
         (
-            resolve_requirements_v2,
-            (HERE / "output" / "conan_v2_info_stdout.txt").read_bytes(),
-            (HERE / "output" / "conan_v2_info_stderr.txt").read_bytes(),
+            (HERE / "output" / "conan_v2_inspect_stdout.txt").read_bytes(),
+            (HERE / "output" / "conan_v2_inspect_stderr.txt").read_bytes(),
         ),
     ],
     ids=["Conan v1", "Conan v2"],
 )
-async def test_resolve_requirements(mock_process, func, stdout, stderr):
-    mock_process.communicate = AsyncMock(return_value=(stdout, stderr))
-    mock_process.returncode = 0
+@pytest.mark.usefixtures("mock_conan_version")
+def test_inspect_requires_conanfile_py(mock_process, stdout, stderr):
+    mock_process.stdout = stdout
+    mock_process.stderr = stderr
 
-    requires = await func(".")
+    requires = inspect_requires_conanfile_py(HERE / "conanfile.py")
     assert len(requires) == 5
     assert ConanReference("boost/1.79.0") in requires
     assert ConanReference("catch2/3.2.0") in requires
     assert ConanReference("fmt/9.0.0") in requires
     assert ConanReference("nlohmann_json/3.10.0") in requires
-    assert any(ref.package == "ninja" for ref in requires)
+    assert ConanReference("ninja/[^1.10]") in requires
+
+
+def test_inspect_requires_conanfile_txt():
+    requires = inspect_requires_conanfile_txt(HERE / "conanfile.txt")
+    assert len(requires) == 5
+    assert ConanReference("boost/1.79.0") in requires
+    assert ConanReference("catch2/3.2.0") in requires
+    assert ConanReference("fmt/9.0.0") in requires
+    assert ConanReference("nlohmann_json/3.10.0") in requires
+    assert ConanReference("ninja/[^1.10]") in requires
 
 
 @asyncmock_required
@@ -141,9 +165,9 @@ async def test_resolve_requirements(mock_process, func, stdout, stderr):
     ],
     ids=["Conan v1", "Conan v2"],
 )
-async def test_search(mock_process, stdout, stderr):
-    mock_process.communicate = AsyncMock(return_value=(stdout, stderr))
-    mock_process.returncode = 0
+async def test_search(mock_process_async, stdout, stderr):
+    mock_process_async.communicate = AsyncMock(return_value=(stdout, stderr))
+    mock_process_async.returncode = 0
 
     # search
     refs = await search("fmt")
@@ -168,9 +192,9 @@ async def test_search(mock_process, stdout, stderr):
 
 @asyncmock_required
 @pytest.mark.asyncio()
-async def test_search_no_results(mock_process):
-    mock_process.communicate = AsyncMock(return_value=(b"", b""))
-    mock_process.returncode = 0
+async def test_search_no_results(mock_process_async):
+    mock_process_async.communicate = AsyncMock(return_value=(b"", b""))
+    mock_process_async.returncode = 0
 
     refs = await search("")
     assert len(refs) == 0
@@ -178,9 +202,9 @@ async def test_search_no_results(mock_process):
 
 @asyncmock_required
 @pytest.mark.asyncio()
-async def test_search_fail(mock_process):
-    mock_process.communicate = AsyncMock(return_value=(b"", b"Error..."))
-    mock_process.returncode = 1
+async def test_search_fail(mock_process_async):
+    mock_process_async.communicate = AsyncMock(return_value=(b"", b"Error..."))
+    mock_process_async.returncode = 1
 
     with pytest.raises(ConanError, match="Error..."):
         await search("")

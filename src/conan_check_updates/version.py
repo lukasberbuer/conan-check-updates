@@ -115,19 +115,19 @@ class Version:
         return *self.core, self.prerelease, self.build
 
     def __eq__(self, other) -> bool:
-        if other is None:
-            return False
-        if not isinstance(other, Version):
+        if isinstance(other, str):
             other = Version(other, loose=self._loose)
+        if not isinstance(other, Version):
+            return False
         return self.astuple() == other.astuple()
 
     def __lt__(self, other) -> bool:
         # pylint: disable=too-many-return-statements
         # semver precedence: https://semver.org/#spec-item-11
-        if other is None:
-            return False
-        if not isinstance(other, Version):
+        if isinstance(other, str):
             other = Version(other, loose=self._loose)
+        if not isinstance(other, Version):
+            raise TypeError
 
         if self.core < other.core:
             return True
@@ -278,10 +278,10 @@ class VersionRange:
         return f"VersionRange({self._str})"
 
     def __eq__(self, other) -> bool:
-        if other is None:
-            return False
         if isinstance(other, str):
             other = VersionRange(other)
+        if not isinstance(other, VersionRange):
+            return False
         return self.condition_sets == other.condition_sets
 
     def satifies(self, version: Version) -> bool:
@@ -301,21 +301,28 @@ VersionLike: TypeAlias = Union[str, Version]
 VersionLikeOrRange: TypeAlias = Union[VersionLike, VersionRange]
 
 
-def is_semantic_version(value: VersionLikeOrRange) -> TypeGuard[Version]:
+def is_semantic_version(value) -> TypeGuard[Version]:
     """Check if value is a semantic version."""
     return isinstance(value, Version)
 
 
 def find_update(
-    current_version: VersionLike,
+    current_version_or_range: VersionLikeOrRange,
     versions: Sequence[VersionLike],
     target: VersionPart,
 ) -> Optional[Version]:
     """Find latest update for given target."""
+    versions_semantic = list(filter(is_semantic_version, versions))
+
+    def resolve_version():
+        if isinstance(current_version_or_range, VersionRange):
+            return current_version_or_range.max_satifies(versions_semantic)
+        return current_version_or_range
+
+    current_version = resolve_version()
+
     if not is_semantic_version(current_version):
         return None
-
-    versions_semantic = filter(is_semantic_version, versions)
 
     def is_update(v: Version) -> bool:
         assert is_semantic_version(current_version)

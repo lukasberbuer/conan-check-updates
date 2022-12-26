@@ -155,7 +155,6 @@ deps =
     v1: conan<2.0.0
     v2: conan>=2.0.0b
 commands =
-    v2: - conan profile detect
     coverage run --parallel -m pytest
 
 [testenv:coverage-report]

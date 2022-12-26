@@ -9,11 +9,19 @@ from typing import AsyncIterator, List, Optional, Sequence, TextIO
 from .conan import (
     TIMEOUT,
     find_conanfile,
-    resolve_requirements,
+    inspect_requires_conanfile,
     search_versions_parallel,
 )
 from .filter import matches_any
-from .version import Version, VersionLike, VersionPart, find_update, is_semantic_version
+from .version import (
+    Version,
+    VersionLike,
+    VersionLikeOrRange,
+    VersionPart,
+    VersionRange,
+    find_update,
+    is_semantic_version,
+)
 
 if sys.version_info >= (3, 8):
     from importlib import metadata
@@ -49,11 +57,11 @@ def highlight_version_diff(version: str, compare: str, highlight=Colors.RED) -> 
     )
     if i_first_diff is None:
         return version
-    return version[:i_first_diff] + highlight + version[i_first_diff:] + Colors.RESET
+    return version[:i_first_diff] + colored(version[i_first_diff:], highlight)
 
 
 def text_update_column(
-    current_version: VersionLike,
+    current_version: Optional[VersionLike],  # None if not resolved
     update_version: Optional[Version],
     versions: Sequence[VersionLike],
 ) -> str:
@@ -62,6 +70,16 @@ def text_update_column(
     if update_version:
         return highlight_version_diff(str(update_version), str(current_version))
     return str(current_version)
+
+
+def resolve_version(
+    version_or_range: VersionLikeOrRange,
+    versions: Sequence[VersionLike],
+) -> Optional[VersionLike]:
+    if isinstance(version_or_range, VersionRange):
+        versions_semantic = list(filter(is_semantic_version, versions))
+        return version_or_range.max_satifies(versions_semantic)
+    return version_or_range
 
 
 async def async_progressbar(
@@ -93,12 +111,9 @@ async def async_progressbar(
 async def run(path: Path, *, package_filter: List[str], target: VersionPart, timeout: int):
     conanfile = find_conanfile(path)
     print("Checking", colored(str(conanfile), Colors.BOLD))
-
-    print("Resolve requirements...")
-    refs = await resolve_requirements(conanfile, timeout=timeout)
+    refs = inspect_requires_conanfile(conanfile)
     refs_filtered = [ref for ref in refs if matches_any(ref.package, *package_filter)]
 
-    print("Search updates...")
     results = [
         result
         async for result in async_progressbar(
@@ -114,18 +129,24 @@ async def run(path: Path, *, package_filter: List[str], target: VersionPart, tim
     format_str = "{:<{cols_package}} {:>{cols_version}}  \u2192  {}"
 
     for result in sorted(results, key=lambda r: r.ref.package):
-        current_version = result.ref.version
-        update_version = find_update(current_version, result.versions, target=target)
+        current_version_or_range = result.ref.version
+        current_version_resolved = resolve_version(current_version_or_range, result.versions)
 
-        skip = is_semantic_version(current_version) and update_version is None
+        update_version = (
+            find_update(current_version_resolved, result.versions, target=target)
+            if current_version_resolved
+            else None
+        )
+
+        skip = is_semantic_version(current_version_resolved) and update_version is None
         if skip:
             continue
 
         print(
             format_str.format(
                 result.ref.package,
-                str(current_version),
-                text_update_column(current_version, update_version, result.versions),
+                str(current_version_or_range),
+                text_update_column(current_version_resolved, update_version, result.versions),
                 **cols,
             )
         )
@@ -198,7 +219,7 @@ def main():
         "-V",
         "--version",
         action="version",
-        version=get_version(),
+        version=metadata.version(__package__ or __name__),
         help="Show the version and exit.",
     )
     parser.add_argument(
