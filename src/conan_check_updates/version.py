@@ -112,7 +112,7 @@ class Version:
         return self._build
 
     def astuple(self) -> Tuple[int, int, int, Optional[str], Optional[str]]:
-        return *self.core, self.prerelease, self.build
+        return (*self.core, self.prerelease, self.build)
 
     def __eq__(self, other) -> bool:
         if isinstance(other, str):
