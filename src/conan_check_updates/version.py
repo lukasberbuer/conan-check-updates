@@ -43,6 +43,14 @@ class VersionError(ValueError):
     pass
 
 
+class VersionPart(IntEnum):
+    MAJOR = 5
+    MINOR = 4
+    PATCH = 3
+    PRERELEASE = 2
+    BUILD = 1
+
+
 @total_ordering
 class Version:
     """
@@ -109,7 +117,7 @@ class Version:
     def __eq__(self, other) -> bool:
         if other is None:
             return False
-        if isinstance(other, str):
+        if not isinstance(other, Version):
             other = Version(other, loose=self._loose)
         return self.astuple() == other.astuple()
 
@@ -148,6 +156,24 @@ class Version:
             return self.prerelease is not None  # pre-release has lower precedence
 
         return False
+
+    def difference(self, other) -> Optional[VersionPart]:
+        # pylint: disable=too-many-return-statements
+        if other is None:
+            return None
+        if not isinstance(other, Version):
+            other = Version(other, loose=self._loose)
+        if self.major != other.major:
+            return VersionPart.MAJOR
+        if self.minor != other.minor:
+            return VersionPart.MINOR
+        if self.patch != other.patch:
+            return VersionPart.PATCH
+        if self.prerelease != other.prerelease:
+            return VersionPart.PRERELEASE
+        if self.build != other.build:
+            return VersionPart.BUILD
+        return None
 
 
 _REGEX_VERSION_RANGE_CONDITION = (
@@ -280,28 +306,6 @@ def is_semantic_version(value: VersionLikeOrRange) -> TypeGuard[Version]:
     return isinstance(value, Version)
 
 
-class VersionPart(IntEnum):
-    MAJOR = 5
-    MINOR = 4
-    PATCH = 3
-    PRERELEASE = 2
-    BUILD = 1
-
-
-def version_difference(version1: Version, version2: Version) -> Optional[VersionPart]:
-    if version1.major != version2.major:
-        return VersionPart.MAJOR
-    if version1.minor != version2.minor:
-        return VersionPart.MINOR
-    if version1.patch != version2.patch:
-        return VersionPart.PATCH
-    if version1.prerelease != version2.prerelease:
-        return VersionPart.PRERELEASE
-    if version1.build != version2.build:
-        return VersionPart.BUILD
-    return None
-
-
 def find_update(
     current_version: VersionLike,
     versions: Sequence[VersionLike],
@@ -315,7 +319,7 @@ def find_update(
 
     def is_update(v: Version) -> bool:
         assert is_semantic_version(current_version)
-        return v > current_version and (version_difference(current_version, v) or 0) <= target
+        return v > current_version and (v.difference(current_version) or 0) <= target
 
     versions_update = list(filter(is_update, versions_semantic))
     return max(versions_update) if versions_update else None

@@ -10,7 +10,6 @@ from conan_check_updates.version import (
     VersionRange,
     VersionRangeCondition,
     find_update,
-    version_difference,
 )
 
 
@@ -159,7 +158,7 @@ def test_version_range_max_satifies(version_range_str, versions, expected):
 
 
 @pytest.mark.parametrize(
-    ("version1", "version2", "part"),
+    ("version", "other", "part"),
     [
         ("1.0.0", "1.0.0", None),
         ("1.0.0", "0.9.8", VersionPart.MAJOR),
@@ -169,8 +168,8 @@ def test_version_range_max_satifies(version_range_str, versions, expected):
         ("1.0.0", "1.0.0+1", VersionPart.BUILD),
     ],
 )
-def test_version_difference(version1: str, version2: str, part: VersionPart):
-    assert version_difference(Version(version1), Version(version2)) == part
+def test_version_difference(version: str, other: str, part: VersionPart):
+    assert Version(version).difference(Version(other)) == part
 
 
 @pytest.mark.parametrize(
