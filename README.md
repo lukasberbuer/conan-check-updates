@@ -1,6 +1,8 @@
 # conan-check-updates
 
 [![CI](https://github.com/lukasberbuer/conan-check-updates/workflows/CI/badge.svg)](https://github.com/lukasberbuer/conan-check-updates/actions)
+[![Coverage Status](https://coveralls.io/repos/github/lukasberbuer/conan-check-updates/badge.svg?branch=master)](https://coveralls.io/github/lukasberbuer/conan-check-updates?branch=master)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI](https://img.shields.io/pypi/v/conan-check-updates)](https://pypi.org/project/conan-check-updates)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/conan-check-updates)](https://pypi.org/project/conan-check-updates)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
