@@ -307,20 +307,11 @@ def is_semantic_version(value) -> TypeGuard[Version]:
 
 
 def find_update(
-    current_version_or_range: VersionLikeOrRange,
+    current_version: VersionLike,
     versions: Sequence[VersionLike],
     target: VersionPart,
 ) -> Optional[Version]:
     """Find latest update for given target."""
-    versions_semantic = list(filter(is_semantic_version, versions))
-
-    def resolve_version():
-        if isinstance(current_version_or_range, VersionRange):
-            return current_version_or_range.max_satifies(versions_semantic)
-        return current_version_or_range
-
-    current_version = resolve_version()
-
     if not is_semantic_version(current_version):
         return None
 
@@ -328,5 +319,6 @@ def find_update(
         assert is_semantic_version(current_version)
         return v > current_version and (v.difference(current_version) or 0) <= target
 
+    versions_semantic = list(filter(is_semantic_version, versions))
     versions_update = list(filter(is_update, versions_semantic))
     return max(versions_update) if versions_update else None

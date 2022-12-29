@@ -310,7 +310,7 @@ async def search_versions(
 async def search_versions_parallel(
     refs: List[ConanReference],
     *,
-    timeout: int = TIMEOUT,
+    timeout: Optional[int] = TIMEOUT,
 ) -> AsyncIterator[ConanSearchVersionsResult]:
     coros = asyncio.as_completed(
         [search_versions(ref, timeout=None) for ref in refs],

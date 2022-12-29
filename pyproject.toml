@@ -57,7 +57,7 @@ dev = [
 ]
 
 [project.scripts]
-conan-check-updates = "conan_check_updates.__main__:main"
+conan-check-updates = "conan_check_updates.cli:main"
 
 [project.urls]
 Changelog = "https://github.com/lukasberbuer/conan-check-updates/blob/master/CHANGELOG.md"
