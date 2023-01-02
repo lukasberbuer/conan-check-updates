@@ -48,6 +48,7 @@ class AnsiCodes(IntEnum):
     FG_MAGENTA = 35
     FG_CYAN = 36
     FG_WHITE = 37
+    FG_DEFAULT = 39
     # background
     BG_BLACK = 40
     BG_RED = 41
@@ -57,6 +58,7 @@ class AnsiCodes(IntEnum):
     BG_MAGENTA = 45
     BG_CYAN = 46
     BG_WHITE = 47
+    BG_DEFAULT = 49
 
     def __str__(self) -> str:
         return f"\033[{str(self.value)}m"

@@ -143,12 +143,22 @@ class Progressbar:
         self.file.flush()
 
 
-def highlighted_version_difference(
-    version: VersionLike,
-    compare: VersionLike,
-    highlight: AnsiCodes,
-) -> str:
+HIGHLIGHT_COLORS = {
+    VersionPart.MAJOR: AnsiCodes.FG_RED,
+    VersionPart.MINOR: AnsiCodes.FG_CYAN,
+    VersionPart.PATCH: AnsiCodes.FG_GREEN,
+    None: AnsiCodes.FG_DEFAULT,
+}
+
+
+def highlighted_version_difference(version: VersionLike, compare: VersionLike) -> str:
     """Highlight differing parts of version string."""
+    version_difference: Optional[VersionPart] = VersionPart.MAJOR  # default for non-semantic
+    if is_semantic_version(version) and is_semantic_version(compare):
+        version_difference = version.difference(compare)
+
+    color = HIGHLIGHT_COLORS.get(version_difference, AnsiCodes.FG_DEFAULT)
+
     version = str(version)
     compare = str(compare)
     i_first_diff = next(
@@ -157,7 +167,7 @@ def highlighted_version_difference(
     )
     if i_first_diff is None:
         return version
-    return version[:i_first_diff] + colored(version[i_first_diff:], highlight)
+    return version[:i_first_diff] + colored(version[i_first_diff:], color)
 
 
 def main_wrapper(func):
@@ -197,11 +207,7 @@ async def main(argv: Optional[Sequence[str]] = None):
         if not is_semantic_version(result.current_version):
             return ", ".join(map(str, result.versions))  # print list of available versions
         if result.update_version:
-            return highlighted_version_difference(
-                result.update_version,
-                result.current_version,
-                AnsiCodes.FG_RED,
-            )
+            return highlighted_version_difference(result.update_version, result.current_version)
         return str(result.current_version)
 
     for result in results:

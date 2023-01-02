@@ -23,7 +23,7 @@ echo "
 [requires]
 boost/1.79.0
 catch2/3.2.0
-fmt/9.0.0
+fmt/8.0.0
 nlohmann_json/3.10.0
 " > conanfile.txt
 
