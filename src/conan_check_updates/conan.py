@@ -155,6 +155,9 @@ class ConanReference:
     def __repr__(self) -> str:
         return f"ConanReference({self._str})"
 
+    def __hash__(self) -> int:
+        return hash(self._str)
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, ConanReference):
             return False

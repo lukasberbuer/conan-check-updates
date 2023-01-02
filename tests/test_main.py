@@ -8,7 +8,7 @@ from conan_check_updates.main import check_updates
 from conan_check_updates.version import Version, VersionLike, VersionPart
 
 
-def mock_search_versions(ref: ConanReference, **_):
+async def mock_search_versions(ref: ConanReference, **_):
     versions: Dict[str, List[VersionLike]] = {
         "fmt": [Version(v) for v in ("8.0.0", "8.0.1", "8.1.1", "9.0.0", "9.1.0")],
         "rapidjson": ["cci.20200410", "cci.20211112", "cci.20220822"],
@@ -52,7 +52,7 @@ async def test_check_updates(tmp_path, requires, target, current_version, update
     assert len(results) == 1
     assert results[0].ref == ref
     assert results[0].current_version == current_version
-    assert results[0].versions == mock_search_versions(ref).versions
+    assert results[0].versions == (await mock_search_versions(ref)).versions
     assert results[0].update_version == update_version
 
 

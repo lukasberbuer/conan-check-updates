@@ -87,6 +87,9 @@ class Version:
     def __repr__(self) -> str:
         return f"Version({self._str})"
 
+    def __hash__(self) -> int:
+        return hash(self._str)
+
     @property
     def major(self) -> int:
         return self._major
@@ -276,6 +279,9 @@ class VersionRange:
 
     def __repr__(self) -> str:
         return f"VersionRange({self._str})"
+
+    def __hash__(self) -> int:
+        return hash(self._str)
 
     def __eq__(self, other) -> bool:
         if isinstance(other, str):
