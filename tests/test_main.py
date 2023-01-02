@@ -7,13 +7,24 @@ from conan_check_updates.conan import ConanReference, ConanSearchVersionsResult
 from conan_check_updates.main import CheckUpdateResult, check_updates, upgrade_conanfile
 from conan_check_updates.version import Version, VersionLike, VersionPart
 
+MOCK_VERSIONS: Dict[str, List[VersionLike]] = {
+    "fmt": [
+        Version("8.0.0"),
+        Version("8.0.1"),
+        Version("8.1.1"),
+        Version("9.0.0"),
+        Version("9.1.0"),
+    ],
+    "rapidjson": [
+        "cci.20200410",
+        "cci.20211112",
+        "cci.20220822",
+    ],
+}
+
 
 async def mock_search_versions(ref: ConanReference, **_):
-    versions: Dict[str, List[VersionLike]] = {
-        "fmt": [Version(v) for v in ("8.0.0", "8.0.1", "8.1.1", "9.0.0", "9.1.0")],
-        "rapidjson": ["cci.20200410", "cci.20211112", "cci.20220822"],
-    }
-    return ConanSearchVersionsResult(ref, versions.get(ref.package, []))
+    return ConanSearchVersionsResult(ref, MOCK_VERSIONS.get(ref.package, []))
 
 
 @pytest.mark.asyncio()
@@ -79,7 +90,7 @@ async def test_check_updates_filter(tmp_path, package_filter, package_list):
     assert results_packages == package_list
 
 
-def create_update_result(ref: str, current_version: str, update_version: str):
+def update_result(ref: str, current_version: str, update_version: str):
     return CheckUpdateResult(
         ConanReference.parse(ref),
         [],
@@ -90,14 +101,21 @@ def create_update_result(ref: str, current_version: str, update_version: str):
 
 def test_upgrade_conanfile(tmp_path):
     conanfile = tmp_path / "conanfile.txt"
-    conanfile.write_text("\n".join(["[requires]", "boost/1.79.0", "fmt/[^8.0]", "zlib/1.2.13"]))
+    conanfile.write_text(
+        (
+            "[requires]\n"
+            "boost/1.79.0#b5de48490dd951a2d299de5d82369cd5\n"
+            "fmt/[^8.0]\n"
+            "zlib/1.2.13\n"
+        )
+    )
 
     upgrade_conanfile(
         conanfile,
         [
-            create_update_result("boost/1.79.0", "1.79.0", "1.81.0"),
-            create_update_result("fmt/[^8.0]", "8.1.1", "9.1.0"),
-            create_update_result("zlib/1.2.13", "1.2.13", None),
+            update_result("boost/1.79.0#b5de48490dd951a2d299de5d82369cd5", "1.79.0", "1.81.0"),
+            update_result("fmt/[^8.0]", "8.1.1", "9.1.0"),
+            update_result("zlib/1.2.13", "1.2.13", None),
         ],
     )
 
@@ -107,16 +125,16 @@ def test_upgrade_conanfile(tmp_path):
 
 def test_upgrade_conanfile_fail(tmp_path):
     conanfile = tmp_path / "conanfile.txt"
-    conanfile.write_text("\n".join(["[requires]", "boost/1.79.0", "boost/1.79.0"]))
+    conanfile.write_text("[requires]\nboost/1.79.0\nboost/1.79.0\n")
 
     with pytest.raises(
         RuntimeError,
         match="Multiple occurrences of reference 'boost/1.79.0' in conanfile",
     ):
-        upgrade_conanfile(conanfile, [create_update_result("boost/1.79.0", "1.79.0", "1.81.0")])
+        upgrade_conanfile(conanfile, [update_result("boost/1.79.0", "1.79.0", "1.81.0")])
 
     with pytest.raises(
         RuntimeError,
         match="Reference 'boost/2.0.0' not found in conanfile",
     ):
-        upgrade_conanfile(conanfile, [create_update_result("boost/2.0.0", "2.0.0", "2.0.1")])
+        upgrade_conanfile(conanfile, [update_result("boost/2.0.0", "2.0.0", "2.0.1")])

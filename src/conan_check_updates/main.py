@@ -125,8 +125,12 @@ def upgrade_conanfile(conanfile: Path, update_results: Sequence[CheckUpdateResul
                 f"Multiple occurrences of reference '{str(result.ref)}' in conanfile"
             )
 
-        # generate new reference
-        new_ref = replace(result.ref, version=result.update_version)
+        # generate new reference with update version
+        new_ref = replace(
+            result.ref,
+            version=result.update_version,
+            revision=None,  # will be invalidated with new version
+        )
 
         # replace reference strings
         content = content.replace(str(result.ref), str(new_ref), 1)
