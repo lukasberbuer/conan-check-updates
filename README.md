@@ -25,24 +25,41 @@ pip install -U conan-check-updates
 
 ## Usage
 
+<!-- [[[cog
+from subprocess import check_output
+import cog
+
+usage = check_output(("conan-check-updates", "--help")).decode()
+cog.outl("```")
+for line in usage.splitlines():
+    cog.outl(line)
+cog.outl("```")
+]]] -->
 ```
-usage: conan-check-updates [--cwd CWD] [--target {major,minor,patch}] [--timeout TIMEOUT] [-V] [-h] [filter ...]
+usage: conan-check-updates [--cwd CWD] [--target {major,minor,patch}]
+                           [--timeout TIMEOUT] [-V] [-h]
+                           [filter ...]
 
 Check for updates of your conanfile.txt/conanfile.py requirements.
 
 positional arguments:
-  filter                Include only package names matching any of the given strings or patterns. Wildcards (*, ?) are
-                        allowed. Patterns can be inverted with a prepended !, e.g. !boost*. (default: None)
+  filter                Include only package names matching any of the given
+                        strings or patterns. Wildcards (*, ?) are allowed.
+                        Patterns can be inverted with a prepended !, e.g.
+                        !boost*. (default: None)
 
 options:
-  --cwd CWD             Path to a folder containing a recipe or to a recipe file directly (conanfile.py or conanfile.txt).
+  --cwd CWD             Path to a folder containing a recipe or to a recipe
+                        file directly (conanfile.py or conanfile.txt).
                         (default: .)
   --target {major,minor,patch}
-                        Limit update level: major, minor or patch. (default: major)
-  --timeout TIMEOUT     Timeout for `conan info|search` in seconds. (default: 30)
+                        Limit update level: major, minor or patch. (default:
+                        major)
+  --timeout TIMEOUT     Timeout for `conan search` in seconds. (default: 30)
   -V, --version         Show the version and exit.
   -h, --help            Show this message and exit.
 ```
+<!-- [[[end]]] -->
 
 ## Contributing
 
