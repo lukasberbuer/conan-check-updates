@@ -19,6 +19,7 @@ if [ -x "$(command -v $exe_win)" ]; then
     exe=$exe_win
 fi
 
+echo "Generate conanfile.txt"
 echo "
 [requires]
 boost/1.79.0
@@ -27,4 +28,5 @@ fmt/8.0.0
 nlohmann_json/3.10.0
 " > conanfile.txt
 
+echo "Run termshot"
 ./termshot --show-cmd --filename "screenshot.png" -- "$exe"

@@ -103,9 +103,9 @@ async def check_updates(
     return sorted(results, key=lambda r: r.ref.package)
 
 
-def update_conanfile(conanfile: Path, update_results: List[CheckUpdateResult]):
+def upgrade_conanfile(conanfile: Path, update_results: Sequence[CheckUpdateResult]):
     """
-    Update requirements in conanfile.py/conanfile.txt.
+    Overwrite requirements in conanfile.py/conanfile.txt.
 
     Args:
         conanfile: Path to conanfile.py/conanfile.txt
@@ -129,6 +129,6 @@ def update_conanfile(conanfile: Path, update_results: List[CheckUpdateResult]):
         new_ref = replace(result.ref, version=result.update_version)
 
         # replace reference strings
-        content.replace(str(result.ref), str(new_ref), 1)
+        content = content.replace(str(result.ref), str(new_ref), 1)
 
     conanfile.write_text(content, encoding="utf-8")

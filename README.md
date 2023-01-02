@@ -10,7 +10,7 @@
 Check for updates of your `conanfile.txt` / `conanfile.py` requirements.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/lukasberbuer/conan-check-updates/master/docs/screenshot.png" alt="Screenshot" width="500">
+  <img src="https://raw.githubusercontent.com/lukasberbuer/conan-check-updates/master/docs/screenshot.png" alt="Screenshot" width="600">
 </p>
 
 This application is heavily inspired by [npm-check-updates](https://github.com/raineorshine/npm-check-updates).
@@ -37,7 +37,7 @@ cog.outl("```")
 ]]] -->
 ```
 usage: conan-check-updates [--cwd CWD] [--target {major,minor,patch}]
-                           [--timeout TIMEOUT] [-V] [-h]
+                           [--timeout TIMEOUT] [-u] [-V] [-h]
                            [filter ...]
 
 Check for updates of your conanfile.txt/conanfile.py requirements.
@@ -56,6 +56,8 @@ options:
                         Limit update level: major, minor or patch. (default:
                         major)
   --timeout TIMEOUT     Timeout for `conan search` in seconds. (default: 30)
+  -u, --upgrade         Overwrite conanfile with upgraded versions. (default:
+                        False)
   -V, --version         Show the version and exit.
   -h, --help            Show this message and exit.
 ```

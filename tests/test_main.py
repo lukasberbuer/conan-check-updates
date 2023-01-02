@@ -4,7 +4,7 @@ from unittest.mock import Mock, call, patch
 import pytest
 
 from conan_check_updates.conan import ConanReference, ConanSearchVersionsResult
-from conan_check_updates.main import check_updates
+from conan_check_updates.main import CheckUpdateResult, check_updates, upgrade_conanfile
 from conan_check_updates.version import Version, VersionLike, VersionPart
 
 
@@ -77,3 +77,46 @@ async def test_check_updates_filter(tmp_path, package_filter, package_list):
 
     results_packages = [result.ref.package for result in results]
     assert results_packages == package_list
+
+
+def create_update_result(ref: str, current_version: str, update_version: str):
+    return CheckUpdateResult(
+        ConanReference.parse(ref),
+        [],
+        Version(current_version) if current_version else None,
+        Version(update_version) if update_version else None,
+    )
+
+
+def test_upgrade_conanfile(tmp_path):
+    conanfile = tmp_path / "conanfile.txt"
+    conanfile.write_text("\n".join(["[requires]", "boost/1.79.0", "fmt/[^8.0]", "zlib/1.2.13"]))
+
+    upgrade_conanfile(
+        conanfile,
+        [
+            create_update_result("boost/1.79.0", "1.79.0", "1.81.0"),
+            create_update_result("fmt/[^8.0]", "8.1.1", "9.1.0"),
+            create_update_result("zlib/1.2.13", "1.2.13", None),
+        ],
+    )
+
+    lines = conanfile.read_text().splitlines()
+    assert lines == ["[requires]", "boost/1.81.0", "fmt/9.1.0", "zlib/1.2.13"]
+
+
+def test_upgrade_conanfile_fail(tmp_path):
+    conanfile = tmp_path / "conanfile.txt"
+    conanfile.write_text("\n".join(["[requires]", "boost/1.79.0", "boost/1.79.0"]))
+
+    with pytest.raises(
+        RuntimeError,
+        match="Multiple occurrences of reference 'boost/1.79.0' in conanfile",
+    ):
+        upgrade_conanfile(conanfile, [create_update_result("boost/1.79.0", "1.79.0", "1.81.0")])
+
+    with pytest.raises(
+        RuntimeError,
+        match="Reference 'boost/2.0.0' not found in conanfile",
+    ):
+        upgrade_conanfile(conanfile, [create_update_result("boost/2.0.0", "2.0.0", "2.0.1")])

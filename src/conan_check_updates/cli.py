@@ -3,12 +3,13 @@ import asyncio
 import io
 import sys
 from dataclasses import dataclass
+from itertools import filterfalse
 from pathlib import Path
 from typing import List, Optional, Sequence, TextIO
 
 from .color import AnsiCodes, colored
 from .conan import TIMEOUT, find_conanfile
-from .main import CheckUpdateResult, check_updates
+from .main import CheckUpdateResult, check_updates, upgrade_conanfile
 from .version import VersionLike, VersionPart, is_semantic_version
 
 if sys.version_info >= (3, 8):
@@ -31,6 +32,7 @@ class CliArgs:
     package_filter: List[str]
     target: VersionPart
     timeout: Optional[int]
+    upgrade: bool
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> CliArgs:
@@ -90,6 +92,12 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> CliArgs:
         help="Timeout for `conan search` in seconds.",
     )
     parser.add_argument(
+        "-u",
+        "--upgrade",
+        action="store_true",
+        help="Overwrite conanfile with upgraded versions.",
+    )
+    parser.add_argument(
         "-V",
         "--version",
         action="version",
@@ -110,6 +118,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> CliArgs:
         package_filter=args.filter,
         target=target_choices.get(args.target, VersionPart.MAJOR),
         timeout=args.timeout,
+        upgrade=args.upgrade,
     )
 
 
@@ -183,10 +192,13 @@ def main_wrapper(func):
 
 @main_wrapper
 async def main(argv: Optional[Sequence[str]] = None):
+    if argv is None:
+        argv = sys.argv[1:]
+
     args = parse_args(argv)
 
     conanfile = find_conanfile(args.cwd)
-    print("Checking", colored(str(conanfile), AnsiCodes.BOLD))
+    print("Checking", colored(conanfile.as_posix(), AnsiCodes.BOLD))
 
     with Progressbar(keep=True) as pbar:
         results = await check_updates(
@@ -197,29 +209,46 @@ async def main(argv: Optional[Sequence[str]] = None):
             progress_callback=pbar.update,
         )
 
-    format_str = "{0:<{cols_package}} {1:>{cols_version}}  \u2192  {2}"
-    format_kwargs = {
-        "cols_package": max(0, 10, *(len(str(r.ref.package)) for r in results)) + 1,
-        "cols_version": max(0, 10, *(len(str(r.ref.version)) for r in results)),
-    }
+    print()  # empty line after progress bar
 
-    def text_update_column(result: CheckUpdateResult) -> str:
+    # remove up-to-date requirements
+    def is_latest(result: CheckUpdateResult) -> bool:
+        return is_semantic_version(result.current_version) and result.update_version is None
+
+    results = list(filterfalse(is_latest, results))
+    if not results:
+        print("No requirements found")
+        return
+
+    # output update results
+    def update_column(result: CheckUpdateResult) -> str:
         if not is_semantic_version(result.current_version):
             return ", ".join(map(str, result.versions))  # print list of available versions
         if result.update_version:
             return highlighted_version_difference(result.update_version, result.current_version)
         return str(result.current_version)
 
-    for result in results:
-        is_latest = is_semantic_version(result.current_version) and result.update_version is None
-        if is_latest:
-            continue
+    format_str = "{0:<{cols_package}} {1:>{cols_version}}  \u2192  {2}"
+    format_kwargs = {
+        "cols_package": max(0, 10, *(len(str(r.ref.package)) for r in results)) + 1,
+        "cols_version": max(0, 10, *(len(str(r.ref.version)) for r in results)),
+    }
 
+    for result in results:
         print(
             format_str.format(
                 result.ref.package,
                 str(result.current_version),
-                text_update_column(result),
+                update_column(result),
                 **format_kwargs,
             )
         )
+
+    print()
+
+    if args.upgrade:
+        upgrade_conanfile(conanfile, results)
+        print("Run", colored("conan install", AnsiCodes.FG_CYAN), "to install new versions")
+    else:
+        cmd = "conan-check-updates " + " ".join((*argv, "-u"))
+        print("Run", colored(cmd, AnsiCodes.FG_CYAN), "to upgrade", conanfile.as_posix())
