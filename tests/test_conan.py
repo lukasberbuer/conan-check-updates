@@ -98,7 +98,7 @@ def fixture_mock_process():
 
 @pytest.fixture(name="mock_process_async")
 def fixture_mock_process_async():
-    with patch("asyncio.create_subprocess_shell") as mock:
+    with patch("asyncio.create_subprocess_exec") as mock:
         process = Mock(spec=asyncio.subprocess.Process)  # pylint: disable=no-member
         mock.return_value = process
         yield process

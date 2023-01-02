@@ -7,6 +7,7 @@ from ast import literal_eval
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
+from itertools import chain
 from pathlib import Path
 from typing import AsyncIterator, List, Optional, Tuple
 
@@ -30,17 +31,17 @@ class ConanError(RuntimeError):
     """Raised when the Conan CLI returns an error."""
 
 
-def _run_capture(cmd: str, timeout: Optional[int] = TIMEOUT) -> Tuple[bytes, bytes]:
+def _run_capture(*args: str, timeout: Optional[int]) -> Tuple[bytes, bytes]:
     """Run process synchronously and capture stdout and stderr."""
     try:
         process = subprocess.run(
-            cmd,
+            args,
             capture_output=True,
-            shell=True,
-            timeout=timeout,
             check=False,
+            timeout=timeout,
         )
     except TimeoutError:
+        cmd = " ".join(args)
         raise TimeoutError(f"Timeout during {cmd}") from None
 
     if process.returncode != 0:
@@ -49,10 +50,10 @@ def _run_capture(cmd: str, timeout: Optional[int] = TIMEOUT) -> Tuple[bytes, byt
     return process.stdout, process.stderr
 
 
-async def _run_capture_async(cmd: str, timeout: Optional[int] = TIMEOUT) -> Tuple[bytes, bytes]:
+async def _run_capture_async(*args: str, timeout: Optional[int]) -> Tuple[bytes, bytes]:
     """Run process asynchronously and capture stdout and stderr."""
-    process = await asyncio.create_subprocess_shell(
-        cmd,
+    process = await asyncio.create_subprocess_exec(
+        *args,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
@@ -62,6 +63,7 @@ async def _run_capture_async(cmd: str, timeout: Optional[int] = TIMEOUT) -> Tupl
             timeout=timeout,
         )
     except (asyncio.TimeoutError, TimeoutError):
+        cmd = " ".join(args)
         raise TimeoutError(f"Timeout during {cmd}") from None
 
     if process.returncode != 0:
@@ -75,7 +77,7 @@ def conan_version() -> Version:
     """Detect Conan version."""
     if shutil.which("conan") is None:
         raise RuntimeError("Conan executable not found")
-    stdout, _ = _run_capture("conan --version")
+    stdout, _ = _run_capture("conan", "--version", timeout=TIMEOUT)
     return Version(stdout.strip().rsplit(maxsplit=1)[-1].decode())
 
 
@@ -196,13 +198,13 @@ def inspect_requires_conanfile_py(conanfile: Path) -> List[ConanReference]:
 
     def get_command():
         if conan_version().major == 1:
-            args = " ".join(f"-a {attr}" for attr in _REQUIRES_ATTRIBUTES)
-            return f"conan inspect {str(conanfile)} {args}"
+            args = chain.from_iterable(("-a", attr) for attr in _REQUIRES_ATTRIBUTES)
+            return ("conan", "inspect", str(conanfile), *args)
         if conan_version().major == 2:
-            return f"conan inspect {str(conanfile)}"
+            return ("conan", "inspect", str(conanfile))
         raise RuntimeError(f"Conan version {str(conan_version())} not supported")
 
-    stdout, _ = _run_capture(get_command())
+    stdout, _ = _run_capture(*get_command(), timeout=TIMEOUT)
 
     def gen_dict():
         for line in stdout.decode().splitlines():
@@ -273,12 +275,12 @@ async def search(
 
     def get_command():
         if conan_version().major == 1:
-            return f"conan search {pattern} --remote all --raw"
+            return ("conan", "search", pattern, "--remote", "all", "--raw")
         if conan_version().major == 2:
-            return f"conan search {pattern}"
+            return ("conan", "search", pattern)
         raise RuntimeError(f"Conan version {str(conan_version())} not supported")
 
-    stdout, _ = await _run_capture_async(get_command(), timeout=timeout)
+    stdout, _ = await _run_capture_async(*get_command(), timeout=timeout)
     return [
         ConanReference(match.group(0))
         for match in _PATTERN_CONAN_REFERENCE.finditer(stdout.decode())
