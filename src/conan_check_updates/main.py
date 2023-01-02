@@ -1,6 +1,7 @@
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, NamedTuple, Optional, Sequence
+from typing import List, Optional, Sequence
 
 from .conan import (
     TIMEOUT,
@@ -18,6 +19,11 @@ from .version import (
     find_update,
     is_semantic_version,
 )
+
+if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol
 
 
 def resolve_version(
@@ -38,7 +44,9 @@ class CheckUpdateResult:
     update_version: Optional[Version]
 
 
-Progress = NamedTuple("Progress", [("done", int), ("total", int)])
+class ProgressCallback(Protocol):
+    def __call__(self, done: int, total: int):
+        ...
 
 
 async def check_updates(
@@ -47,7 +55,7 @@ async def check_updates(
     package_filter: Optional[Sequence[str]] = None,
     target: VersionPart = VersionPart.MAJOR,
     timeout: Optional[int] = TIMEOUT,
-    progress_callback: Optional[Callable[[Progress], None]] = None
+    progress_callback: Optional[ProgressCallback] = None
 ) -> List[CheckUpdateResult]:
     """
     Check for updates of conanfile.py/conanfile.txt requirements.
@@ -66,7 +74,7 @@ async def check_updates(
     done = 0
     total = len(refs)
     if progress_callback:
-        progress_callback(Progress(done, total))
+        progress_callback(done=done, total=total)
 
     results: List[CheckUpdateResult] = []
     async for result in search_versions_parallel(refs, timeout=timeout):
@@ -90,6 +98,6 @@ async def check_updates(
 
         done += 1
         if progress_callback:
-            progress_callback(Progress(done, total))
+            progress_callback(done=done, total=total)
 
     return sorted(results, key=lambda r: r.ref.package)

@@ -194,7 +194,7 @@ async def main(argv: Optional[Sequence[str]] = None):
             package_filter=args.package_filter,
             target=args.target,
             timeout=args.timeout,
-            progress_callback=lambda p: pbar.update(p.done, p.total),
+            progress_callback=pbar.update,
         )
 
     format_str = "{0:<{cols_package}} {1:>{cols_version}}  \u2192  {2}"

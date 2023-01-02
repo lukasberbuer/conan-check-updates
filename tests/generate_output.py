@@ -23,7 +23,7 @@ def main():
         run_and_save_output(
             "conan_v1_inspect",
             (
-                "conan inspect ./conanfile.py"
+                "conan inspect ./conanfile.py "
                 "-a requires -a build_requires -a tool_requires -a test_requires"
             ),
         )
@@ -31,6 +31,10 @@ def main():
             "conan_v1_search",
             "conan search --remote all --raw fmt",
         )
+        # run_and_save_output(
+        #     "conan_v1_search_all",
+        #     "conan search --remote all --raw *",
+        # )
 
     if conan_version().major == 2:
         print("Generate test output with Conan v2")
@@ -42,6 +46,10 @@ def main():
             "conan_v2_search",
             "conan search fmt",
         )
+        # run_and_save_output(
+        #     "conan_v2_search_all",
+        #     "conan search *",
+        # )
 
 
 if __name__ == "__main__":
