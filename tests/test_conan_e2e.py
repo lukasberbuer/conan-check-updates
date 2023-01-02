@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from test_conan import parse_requires_conanfile_json
 
 from conan_check_updates.conan import (
     ConanReference,
@@ -30,21 +31,17 @@ def test_conan_version_fail():
 
 @pytest.mark.parametrize("conanfile", ["conanfile.py", "conanfile.txt"])
 def test_inspect_requires_conanfile(conanfile):
+    expected = parse_requires_conanfile_json(HERE / "conanfile.json")
     requires = inspect_requires_conanfile(HERE / conanfile)
-    assert len(requires) == 5
-    assert ConanReference("boost/1.79.0") in requires
-    assert ConanReference("catch2/3.2.0") in requires
-    assert ConanReference("fmt/9.0.0") in requires
-    assert ConanReference("nlohmann_json/3.10.0") in requires
-    assert ConanReference("ninja/[^1.10]") in requires
+    assert requires == expected
 
 
 @pytest.mark.flaky(reruns=3)  # possible timeouts in CI
 @pytest.mark.asyncio()
 async def test_search_versions_parallel():
     refs = [
-        ConanReference("boost/1.79.0"),
-        ConanReference("fmt/9.0.0"),
+        ConanReference.parse("boost/1.79.0"),
+        ConanReference.parse("fmt/9.0.0"),
     ]
     results = [r async for r in search_versions_parallel(refs)]
     assert len(results) == 2

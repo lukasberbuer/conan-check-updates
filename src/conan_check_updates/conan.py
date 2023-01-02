@@ -19,12 +19,12 @@ from .version import (
     VersionRange,
 )
 
-TIMEOUT = 30
-
-
 if sys.platform == "win32":
     # Proactor loop required by asyncio.create_subprocess_shell (default since Python 3.8)
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
+
+TIMEOUT = 30
 
 
 class ConanError(RuntimeError):
@@ -123,73 +123,51 @@ _REGEX_CONAN_REFERENCE = (
 _PATTERN_CONAN_REFERENCE = re.compile(_REGEX_CONAN_REFERENCE)
 
 
+@dataclass(frozen=True)
 class ConanReference:
-    """Conan recipe reference of the form `name/version@user/channel#revision`."""
+    """Conan recipe reference of the form `name/version#revision@user/channel`."""
 
-    def __init__(self, reference: str):
+    package: str
+    version: VersionLikeOrRange
+    revision: Optional[str] = None
+    user: Optional[str] = None
+    channel: Optional[str] = None
+
+    @classmethod
+    def parse(cls, reference: str):
         reference = reference.strip()
-        self._str = reference
-
         match = _PATTERN_CONAN_REFERENCE.fullmatch(reference)
         if not match:
             raise ValueError(f"Invalid Conan reference '{reference}'")
 
-        self._package = match.group("package")
-        self._version = self._parse_version(match.group("version"), loose=True)
-        self._revision = match.group("revision")
-        self._user = match.group("user")
-        self._channel = match.group("channel")
+        def parse_version(value: str, *, loose: bool) -> VersionLikeOrRange:
+            if value.startswith("[") and value.endswith("]"):
+                return VersionRange(value[1:-1])
+            try:
+                return Version(value, loose=loose)
+            except VersionError:
+                return value
 
-    @staticmethod
-    def _parse_version(value: str, *, loose: bool) -> VersionLikeOrRange:
-        if value.startswith("[") and value.endswith("]"):
-            return VersionRange(value[1:-1])
-        try:
-            return Version(value, loose=loose)
-        except VersionError:
-            return value
-
-    def __str__(self) -> str:
-        return self._str
-
-    def __repr__(self) -> str:
-        return f"ConanReference({self._str})"
-
-    def __hash__(self) -> int:
-        return hash(self._str)
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, ConanReference):
-            return False
-        return all(
-            (
-                self.package == other.package,
-                self.version == other.version,
-                self.revision == other.revision,
-                self.user == other.user,
-                self.channel == other.channel,
-            )
+        return cls(
+            package=match.group("package"),
+            version=parse_version(match.group("version"), loose=True),
+            revision=match.group("revision"),
+            user=match.group("user"),
+            channel=match.group("channel"),
         )
 
-    @property
-    def package(self) -> str:
-        return self._package
+    def __str__(self) -> str:
+        def version_str() -> str:
+            if isinstance(self.version, VersionRange):
+                return f"[{self.version!s}]"
+            return f"{self.version!s}"
 
-    @property
-    def version(self) -> VersionLikeOrRange:
-        return self._version
-
-    @property
-    def revision(self) -> Optional[str]:
-        return self._revision
-
-    @property
-    def user(self) -> Optional[str]:
-        return self._user
-
-    @property
-    def channel(self) -> Optional[str]:
-        return self._channel
+        result = f"{self.package}/{version_str()}"
+        if self.revision:
+            result += f"#{self.revision}"
+        if self.user and self.channel:
+            result += f"@{self.user}/{self.channel}"
+        return result
 
 
 _REQUIRES_ATTRIBUTES = ("requires", "build_requires", "tool_requires", "test_requires")
@@ -227,7 +205,7 @@ def inspect_requires_conanfile_py(conanfile: Path) -> List[ConanReference]:
                 else:
                     yield value
 
-    return list(map(ConanReference, gen_requires()))
+    return list(map(ConanReference.parse, gen_requires()))
 
 
 def inspect_requires_conanfile_txt(conanfile: Path) -> List[ConanReference]:
@@ -253,7 +231,7 @@ def inspect_requires_conanfile_txt(conanfile: Path) -> List[ConanReference]:
         for key in _REQUIRES_ATTRIBUTES:
             yield from attributes[key]
 
-    return list(map(ConanReference, gen_requires()))
+    return list(map(ConanReference.parse, gen_requires()))
 
 
 def inspect_requires_conanfile(conanfile: Path) -> List[ConanReference]:
@@ -285,7 +263,7 @@ async def search(
 
     stdout, _ = await _run_capture_async(*get_command(), timeout=timeout)
     return [
-        ConanReference(match.group(0))
+        ConanReference.parse(match.group(0))
         for match in _PATTERN_CONAN_REFERENCE.finditer(stdout.decode())
     ]
 

@@ -1,5 +1,5 @@
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import List, Optional, Sequence
 
@@ -55,7 +55,7 @@ async def check_updates(
     package_filter: Optional[Sequence[str]] = None,
     target: VersionPart = VersionPart.MAJOR,
     timeout: Optional[int] = TIMEOUT,
-    progress_callback: Optional[ProgressCallback] = None
+    progress_callback: Optional[ProgressCallback] = None,
 ) -> List[CheckUpdateResult]:
     """
     Check for updates of conanfile.py/conanfile.txt requirements.
@@ -101,3 +101,34 @@ async def check_updates(
             progress_callback(done=done, total=total)
 
     return sorted(results, key=lambda r: r.ref.package)
+
+
+def update_conanfile(conanfile: Path, update_results: List[CheckUpdateResult]):
+    """
+    Update requirements in conanfile.py/conanfile.txt.
+
+    Args:
+        conanfile: Path to conanfile.py/conanfile.txt
+        update_results: Results from `check_updates`
+    """
+    content = conanfile.read_text(encoding="utf-8")
+
+    for result in update_results:
+        if not result.current_version or not result.update_version:
+            continue
+
+        occurrences = content.count(str(result.ref))
+        if occurrences < 1:
+            raise RuntimeError(f"Reference '{str(result.ref)}' not found in conanfile")
+        if occurrences > 1:
+            raise RuntimeError(
+                f"Multiple occurrences of reference '{str(result.ref)}' in conanfile"
+            )
+
+        # generate new reference
+        new_ref = replace(result.ref, version=result.update_version)
+
+        # replace reference strings
+        content.replace(str(result.ref), str(new_ref), 1)
+
+    conanfile.write_text(content, encoding="utf-8")

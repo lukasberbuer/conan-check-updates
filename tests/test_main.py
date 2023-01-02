@@ -48,7 +48,7 @@ async def test_check_updates(tmp_path, requires, target, current_version, update
         call(done=1, total=1),
     ]
 
-    ref = ConanReference(requires)
+    ref = ConanReference.parse(requires)
     assert len(results) == 1
     assert results[0].ref == ref
     assert results[0].current_version == current_version

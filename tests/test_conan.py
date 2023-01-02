@@ -1,7 +1,9 @@
 import asyncio
+import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import List
 from unittest.mock import Mock, patch
 
 try:
@@ -55,6 +57,7 @@ def test_find_conanfile(tmp_path, conanfile):
     [
         ("pkg/0.1.0", "pkg", Version("0.1.0"), None, None, None),
         ("pkg/0.1.0@user/stable", "pkg", Version("0.1.0"), None, "user", "stable"),
+        # revision
         (
             "zlib/1.2.12#87a7211557b6690ef5bf7fc599dd8349",
             "zlib",
@@ -63,6 +66,15 @@ def test_find_conanfile(tmp_path, conanfile):
             None,
             None,
         ),
+        # revision + user/channel
+        (
+            "zlib/1.2.12#87a7211557b6690ef5bf7fc599dd8349@user/channel",
+            "zlib",
+            Version("1.2.12"),
+            "87a7211557b6690ef5bf7fc599dd8349",
+            "user",
+            "channel",
+        ),
         # non-semanic versions
         ("rapidjson/cci.20220822", "rapidjson", "cci.20220822", None, None, None),
         # version ranges
@@ -70,21 +82,22 @@ def test_find_conanfile(tmp_path, conanfile):
     ],
 )
 def test_parse_conan_reference(reference, package, version, revision, user, channel):
-    result = ConanReference(reference)
+    result = ConanReference.parse(reference)
     assert result.package == package
     assert result.version == version
     assert result.revision == revision
     assert result.user == user
     assert result.channel == channel
+    assert str(result) == reference
 
 
 @pytest.mark.parametrize(
     "invalid_reference",
     ["x", "x/1.0.0", "xyz/1.0.0@user", "xyz/1.0.0@a/b"],
 )
-def test_validate_conan_reference(invalid_reference):
+def test_parse_conan_reference_invalid(invalid_reference):
     with pytest.raises(ValueError, match="Invalid Conan reference"):
-        ConanReference(invalid_reference)
+        ConanReference.parse(invalid_reference)
 
 
 @pytest.fixture(name="mock_process")
@@ -111,6 +124,16 @@ def _fixture_mock_conan_version():
         yield
 
 
+def parse_requires_conanfile_json(path: Path) -> List[ConanReference]:
+    obj = json.loads(path.read_bytes())
+
+    def gen_requires():
+        for attr in ("requires", "build_requires", "tool_requires", "test_requires"):
+            yield from obj.get(attr, [])
+
+    return list(map(ConanReference.parse, gen_requires()))
+
+
 @pytest.mark.parametrize(
     ("stdout", "stderr"),
     [
@@ -130,23 +153,15 @@ def test_inspect_requires_conanfile_py(mock_process, stdout, stderr):
     mock_process.stdout = stdout
     mock_process.stderr = stderr
 
+    expected = parse_requires_conanfile_json(HERE / "conanfile.json")
     requires = inspect_requires_conanfile_py(HERE / "conanfile.py")
-    assert len(requires) == 5
-    assert ConanReference("boost/1.79.0") in requires
-    assert ConanReference("catch2/3.2.0") in requires
-    assert ConanReference("fmt/9.0.0") in requires
-    assert ConanReference("nlohmann_json/3.10.0") in requires
-    assert ConanReference("ninja/[^1.10]") in requires
+    assert requires == expected
 
 
 def test_inspect_requires_conanfile_txt():
+    expected = parse_requires_conanfile_json(HERE / "conanfile.json")
     requires = inspect_requires_conanfile_txt(HERE / "conanfile.txt")
-    assert len(requires) == 5
-    assert ConanReference("boost/1.79.0") in requires
-    assert ConanReference("catch2/3.2.0") in requires
-    assert ConanReference("fmt/9.0.0") in requires
-    assert ConanReference("nlohmann_json/3.10.0") in requires
-    assert ConanReference("ninja/[^1.10]") in requires
+    assert requires == expected
 
 
 @asyncmock_required
@@ -172,12 +187,12 @@ async def test_search(mock_process_async, stdout, stderr):
     # search
     refs = await search("fmt")
     assert len(refs) > 0
-    assert ConanReference("fmt/5.3.0") in refs
-    assert ConanReference("fmt/6.0.0") in refs
-    assert ConanReference("fmt/6.1.0") in refs
+    assert ConanReference.parse("fmt/5.3.0") in refs
+    assert ConanReference.parse("fmt/6.0.0") in refs
+    assert ConanReference.parse("fmt/6.1.0") in refs
 
     # search_versions
-    ref = ConanReference("fmt/5.3.0")
+    ref = ConanReference.parse("fmt/5.3.0")
     result = await search_versions(ref)
     assert result.ref == ref
     assert Version("5.3.0") in result.versions
