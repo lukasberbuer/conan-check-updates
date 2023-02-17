@@ -125,7 +125,6 @@ class Version:
         return self.astuple() == other.astuple()
 
     def __lt__(self, other) -> bool:
-        # pylint: disable=too-many-return-statements
         # semver precedence: https://semver.org/#spec-item-11
         if isinstance(other, str):
             other = Version(other, loose=self._loose)

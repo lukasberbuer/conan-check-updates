@@ -2,7 +2,6 @@ import random
 from typing import List, Optional
 
 import pytest
-
 from conan_check_updates.version import (
     Version,
     VersionError,

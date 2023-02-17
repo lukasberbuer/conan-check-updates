@@ -12,7 +12,6 @@ except ImportError:
     ...  # skip tests for Python < 3.8
 
 import pytest
-
 from conan_check_updates.conan import (
     ConanError,
     ConanReference,

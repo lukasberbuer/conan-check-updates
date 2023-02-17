@@ -171,7 +171,7 @@ def highlighted_version_difference(version: VersionLike, compare: VersionLike) -
     version = str(version)
     compare = str(compare)
     i_first_diff = next(
-        (i for i, (s1, s2) in enumerate(zip(version, compare)) if s1 != s2),
+        (i for i, (s1, s2) in enumerate(zip(version, compare)) if s1 != s2),  # noqa: B905
         None,
     )
     if i_first_diff is None:

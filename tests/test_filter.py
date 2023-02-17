@@ -1,5 +1,4 @@
 import pytest
-
 from conan_check_updates.filter import matches_any
 
 

@@ -181,7 +181,7 @@ def inspect_requires_conanfile_py(conanfile: Path) -> List[ConanReference]:
         if conan_version().major == 1:
             args = chain.from_iterable(("-a", attr) for attr in _REQUIRES_ATTRIBUTES)
             return ("conan", "inspect", str(conanfile), *args)
-        if conan_version().major == 2:
+        if conan_version().major == 2:  # noqa: PLR2004
             return ("conan", "inspect", str(conanfile))
         raise RuntimeError(f"Conan version {str(conan_version())} not supported")
 
@@ -257,7 +257,7 @@ async def search(
     def get_command():
         if conan_version().major == 1:
             return ("conan", "search", pattern, "--remote", "all", "--raw")
-        if conan_version().major == 2:
+        if conan_version().major == 2:  # noqa: PLR2004
             return ("conan", "search", pattern)
         raise RuntimeError(f"Conan version {str(conan_version())} not supported")
 

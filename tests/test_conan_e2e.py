@@ -3,8 +3,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from test_conan import parse_requires_conanfile_json
-
 from conan_check_updates.conan import (
     ConanReference,
     conan_version,
@@ -12,6 +10,7 @@ from conan_check_updates.conan import (
     search_versions_parallel,
 )
 from conan_check_updates.version import Version
+from test_conan import parse_requires_conanfile_json
 
 HERE = Path(__file__).parent
 

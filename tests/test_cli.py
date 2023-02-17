@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from conan_check_updates.cli import parse_args
 from conan_check_updates.version import VersionPart
 

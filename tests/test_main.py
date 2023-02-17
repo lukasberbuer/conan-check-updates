@@ -2,7 +2,6 @@ from typing import Dict, List
 from unittest.mock import Mock, call, patch
 
 import pytest
-
 from conan_check_updates.conan import ConanReference, ConanSearchVersionsResult
 from conan_check_updates.main import CheckUpdateResult, check_updates, upgrade_conanfile
 from conan_check_updates.version import Version, VersionLike, VersionPart

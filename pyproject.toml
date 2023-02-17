@@ -70,28 +70,33 @@ Issues = "https://github.com/lukasberbuer/conan-check-updates/issues"
 line-length = 100
 
 
-[tool.isort]
-profile = "black"
-
-
-[tool.pylint.format]
-max-line-length = 100
-
-[tool.pylint.message_control]
-good-names=[
-    "e", "i", "j", "n", "r", "v", "it"
+[tool.ruff]
+line-length = 100
+select = [
+    "F", # pyflakes
+    "E", "W", # pycodestyle
+    "I", # isort
+    "N", # pep8 naming
+    "B", # flake8 bugbear
+    "A", # flake8 builtins
+    "C4", # flake8 comprehensions
+    "G", # flake8 logging format
+    "PIE", # flake8 pie
+    "RET", # flake8 return
+    "SIM", # flake8 simplify
+    "PT", # flake8 pytest style
+    "PL", # pylint
+    "RUF", # ruff specific rules
 ]
-disable = [
-    "import-error",
-    "missing-module-docstring",
-    "missing-class-docstring",
-    "missing-function-docstring",
-    "too-few-public-methods",
-    "too-many-arguments",
+ignore = [
+    "PLR0911", # too many return statements
 ]
 
-[tool.pylint.similarities]
-min-similarity-lines = 6
+[tool.ruff.per-file-ignores]
+"tests/*" = [
+    "PLR0913", # too many arguments
+    "PLR2004", # magic value
+]
 
 
 [tool.mypy]
@@ -119,8 +124,7 @@ legacy_tox_ini = """
 [tox]
 envlist =
     black
-    isort
-    pylint
+    ruff
     mypy
     py{37, 38, 39, 310, 311}-{v1, v2}
     coverage-report
@@ -132,17 +136,11 @@ commands =
     black --diff .
     black --check .
 
-[testenv:isort]
+[testenv:ruff]
 skip_install = true
-deps = isort
+deps = ruff
 commands =
-    isort --diff .
-    isort --check-only .
-
-[testenv:pylint]
-skip_install = true
-deps = pylint
-commands = pylint ./src/
+    ruff check .
 
 [testenv:mypy]
 skip_install = true
