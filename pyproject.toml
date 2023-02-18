@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "conan-check-updates"
-version = "0.1.0"
+version = "0.2.0"
 description = "Check for updates of your conanfile.txt/conanfile.py requirements."
 authors = [{ name = "Lukas Berbuer", email = "lukas.berbuer@gmail.com" }]
 readme = "README.md"
@@ -47,10 +47,9 @@ tests = [
 tools = [
     "black",
     "cogapp>=3",
-    "isort",
     "mypy>=0.9", # pyproject.toml support
     "pre-commit",
-    "pylint>=2.5", # pyproject.toml support
+    "ruff",
     "tox>=3.4", # pyproject.toml support
 ]
 dev = [
