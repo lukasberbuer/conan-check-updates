@@ -36,8 +36,8 @@ def test_parse_args_version(capsys):
     assert e.value.code == 0
 
     stdout, stderr = capsys.readouterr()
-    assert stdout != ""
-    assert stderr == ""
+    assert stdout
+    assert not stderr
 
     version_parts = stdout.split(".")
     assert len(version_parts) == 3

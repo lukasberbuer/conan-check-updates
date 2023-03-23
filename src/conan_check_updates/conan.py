@@ -215,8 +215,8 @@ def inspect_requires_conanfile_txt(conanfile: Path) -> List[ConanReference]:
     attributes = defaultdict(list)
     with open(conanfile, mode="r", encoding="utf-8") as file:
         key = None
-        for line in file:
-            line = line.strip()
+        for line_orig in file:
+            line = line_orig.strip()
             # strip end of line comment
             line = line.partition(" #")[0].strip()
             # ignore empty line or line comments
