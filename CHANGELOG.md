@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Ignore line comments in conanfile.txt
 
 ## [0.2.0] - 2022-02-18
 
@@ -20,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Get requirements directly from conanfile.py/conanfile.txt instead running conan info
-
 
 ## [0.1.0] - 2021-12-16
 

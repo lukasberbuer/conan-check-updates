@@ -216,9 +216,11 @@ def inspect_requires_conanfile_txt(conanfile: Path) -> List[ConanReference]:
     with open(conanfile, mode="r", encoding="utf-8") as file:
         key = None
         for line in file:
-            line = line.partition(" #")[0]  # strip comment
             line = line.strip()
-            if not line:
+            # strip end of line comment
+            line = line.partition(" #")[0].strip()
+            # ignore empty line or line comments
+            if not line or line.startswith("#"):
                 continue
             if line.startswith("[") and line.endswith("]"):
                 key = line[1:-1]
