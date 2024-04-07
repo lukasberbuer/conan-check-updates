@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import subprocess
 import sys
@@ -6,16 +7,15 @@ from pathlib import Path
 from typing import List
 from unittest.mock import Mock, patch
 
-try:
+with contextlib.suppress(ImportError):
     from unittest.mock import AsyncMock
-except ImportError:
-    ...  # skip tests for Python < 3.8
 
 import pytest
 from conan_check_updates.conan import (
     ConanError,
     ConanReference,
     find_conanfile,
+    inspect_requirements_conanfile_py,
     inspect_requires_conanfile_py,
     inspect_requires_conanfile_txt,
     search,
@@ -127,7 +127,14 @@ def parse_requires_conanfile_json(path: Path) -> List[ConanReference]:
     obj = json.loads(path.read_bytes())
 
     def gen_requires():
-        for attr in ("requires", "build_requires", "tool_requires", "test_requires"):
+        for attr in (
+            "requires",
+            "build_requires",
+            "tool_requires",
+            "test_requires",
+            "requirements",
+            "tool_requirements",
+        ):
             yield from obj.get(attr, [])
 
     return list(map(ConanReference.parse, gen_requires()))
@@ -152,13 +159,15 @@ def test_inspect_requires_conanfile_py(mock_process, stdout, stderr):
     mock_process.stdout = stdout
     mock_process.stderr = stderr
 
-    expected = parse_requires_conanfile_json(HERE / "conanfile.json")
-    requires = inspect_requires_conanfile_py(HERE / "conanfile.py")
+    expected = parse_requires_conanfile_json(HERE / "conanfile.py.json")
+    requires = inspect_requires_conanfile_py(
+        HERE / "conanfile.py"
+    ) + inspect_requirements_conanfile_py(HERE / "conanfile.py")
     assert requires == expected
 
 
 def test_inspect_requires_conanfile_txt():
-    expected = parse_requires_conanfile_json(HERE / "conanfile.json")
+    expected = parse_requires_conanfile_json(HERE / "conanfile.txt.json")
     requires = inspect_requires_conanfile_txt(HERE / "conanfile.txt")
     assert requires == expected
 

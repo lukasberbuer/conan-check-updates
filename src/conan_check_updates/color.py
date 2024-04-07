@@ -61,7 +61,7 @@ class AnsiCodes(IntEnum):
     BG_DEFAULT = 49
 
     def __str__(self) -> str:
-        return f"\033[{str(self.value)}m"
+        return f"\033[{self.value!s}m"
 
 
 def colored(text: str, *codes: AnsiCodes, force_color: bool = False) -> str:

@@ -10,7 +10,7 @@ OUTPUT_DIR = HERE / "output"
 def run_and_save_output(name: str, cmd: str):
     print("Run", name)
     # pylint: disable=subprocess-run-check
-    proc = run(cmd, capture_output=True, shell=True, cwd=HERE)
+    proc = run(cmd, capture_output=True, shell=True, cwd=HERE, check=False)
     if proc.returncode != 0:
         raise RuntimeError(f"Error running '{cmd}':\n\n{proc.stderr.decode()}")
     (OUTPUT_DIR / f"{name}_stdout.txt").write_bytes(proc.stdout)
