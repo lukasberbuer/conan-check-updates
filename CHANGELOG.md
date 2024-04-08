@@ -11,25 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Check `requires` and `tool_requires` function calls in in `conanfile.py`
+- Check `requires` and `tool_requires` function calls in in `conanfile.py` (#1)
 - Python 3.12 support
 
 ### Fixed
 
-- Ignore line comments in conanfile.txt
+- Ignore line comments in `conanfile.txt`
 
 ## [0.2.0] - 2022-02-18
 
 ### Added
 
-- Add --upgrade / -u option to update conanfile
+- Add `--upgrade` / `-u` option to update conanfile
 - Conan v2 compatibility and tests
 - Build wheel for PyPI
 - Handle revisions
 
 ### Changed
 
-- Get requirements directly from conanfile.py/conanfile.txt instead running conan info
+- Get requirements directly from `conanfile.py`/`conanfile.txt` instead running conan info
 
 ## [0.1.0] - 2021-12-16
 
