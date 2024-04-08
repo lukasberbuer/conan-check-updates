@@ -45,7 +45,6 @@ tests = [
     "pytest-rerunfailures",
 ]
 tools = [
-    "black",
     "cogapp>=3",
     "mypy>=0.9", # pyproject.toml support
     "pre-commit",
@@ -122,18 +121,18 @@ source = ["src", ".tox/*/site-packages"]
 legacy_tox_ini = """
 [tox]
 envlist =
-    black
+    ruff-format
     ruff
     mypy
     py{37, 38, 39, 310, 311, 312}-{v1, v2}
     coverage-report
 
-[testenv:black]
+[testenv:ruff-format]
 skip_install = true
-deps = black
+deps = ruff
 commands =
-    black --diff .
-    black --check .
+    ruff format --diff .
+    ruff format --check .
 
 [testenv:ruff]
 skip_install = true

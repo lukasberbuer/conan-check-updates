@@ -17,8 +17,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install Tox
         run: pip install tox
-      - name: Run black
-        run: tox -e black
+      - name: Run ruff formatter
+        run: tox -e ruff-format
       - name: Run ruff
         run: tox -e ruff
       - name: Run mypy

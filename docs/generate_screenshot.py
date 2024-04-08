@@ -13,7 +13,7 @@ from subprocess import check_call
 
 HERE = Path(__file__).parent
 
-URL_TERMSHOT = "https://github.com/homeport/termshot/releases/download/v0.2.5/termshot_0.2.5_linux_amd64.tar.gz"  # noqa, pylint: disable=line-too-long
+URL_TERMSHOT = "https://github.com/homeport/termshot/releases/download/v0.2.5/termshot_0.2.5_linux_amd64.tar.gz"
 
 CONANFILE = """
 [requires]

@@ -254,7 +254,7 @@ class VersionRange:
         - https://github.com/npm/node-semver
         - https://github.com/conan-io/conan/blob/develop2/conans/model/version_range.py
         - https://github.com/conan-io/conan/blob/develop2/conans/test/unittests/model/version/test_version_range.py
-    """  # noqa, pylint: disable=line-too-long
+    """
 
     def __init__(self, value: str):
         self._str = value
