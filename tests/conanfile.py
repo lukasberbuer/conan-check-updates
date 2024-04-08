@@ -13,3 +13,10 @@ class Example(ConanFile):
     )
     tool_requires = "ninja/[^1.10]"
     generators = "cmake"
+
+    def requirements(self):
+        self.requires("openssl/3.2.0")
+        self.requires("nanodbc/2.13.0")
+        self.requires("ms-gsl/3.1.0")
+        self.tool_requires("cmake/3.27.7")
+        # self.requires("quill/3.6.0")

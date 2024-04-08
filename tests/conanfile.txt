@@ -4,9 +4,14 @@ catch2/3.2.0
 # line comment
 fmt/9.0.0  # end of line comment
 nlohmann_json/3.10.0
+openssl/3.2.0
+nanodbc/2.13.0
+ms-gsl/3.1.0
+# quill/3.6.0
 
 [tool_requires]
 ninja/[^1.10]
+cmake/3.27.7
 
 [generators]
 cmake

@@ -95,13 +95,13 @@ def find_conanfile(path: Path) -> Path:
     if path.is_file():
         if path.name in filenames:
             return path
-        raise ValueError(f"Path is not a conanfile: {str(path)}")
+        raise ValueError(f"Path is not a conanfile: {path!s}")
     if path.is_dir():
         for filepath in (path / filename for filename in filenames):
             if filepath.exists():
                 return filepath
-        raise ValueError(f"Could not find conanfile in path: {str(path)}")
-    raise ValueError(f"Invalid path: {str(path)}")
+        raise ValueError(f"Could not find conanfile in path: {path!s}")
+    raise ValueError(f"Invalid path: {path!s}")
 
 
 # https://docs.conan.io/en/1.55/reference/conanfile/attributes.html#name
@@ -134,8 +134,8 @@ class ConanReference:
     channel: Optional[str] = None
 
     @classmethod
-    def parse(cls, reference: str):
-        reference = reference.strip()
+    def parse(cls, reference):
+        reference = reference.strip() if isinstance(reference, str) else reference["ref"].strip()
         match = _PATTERN_CONAN_REFERENCE.fullmatch(reference)
         if not match:
             raise ValueError(f"Invalid Conan reference '{reference}'")
@@ -173,6 +173,26 @@ class ConanReference:
 _REQUIRES_ATTRIBUTES = ("requires", "build_requires", "tool_requires", "test_requires")
 
 
+def inspect_requirements_conanfile_py(conanfile: Path) -> List[ConanReference]:
+    """Get requirements from requirements() method of conanfile.py"""
+    assert conanfile.name == "conanfile.py"
+    refs = []
+    with open(conanfile, mode="r", encoding="utf-8") as file:
+        for line_orig in file:
+            line = line_orig.strip()
+            # strip end of line comment
+            line = line.partition(" #")[0].strip()
+            # ignore empty line or line comments
+            if not line or line.startswith("#"):
+                continue
+            res = re.search(r'self\.(?:tool_)*requires\("(.*)"\)', line)
+            if res:
+                ref = res.group(1)
+                if len(ref) > 0:
+                    refs.append(ref)
+    return list(map(ConanReference.parse, refs))
+
+
 def inspect_requires_conanfile_py(conanfile: Path) -> List[ConanReference]:
     """Get requirements of conanfile.py with `conan inspect`."""
     assert conanfile.name == "conanfile.py"
@@ -183,7 +203,7 @@ def inspect_requires_conanfile_py(conanfile: Path) -> List[ConanReference]:
             return ("conan", "inspect", str(conanfile), *args)
         if conan_version().major == 2:  # noqa: PLR2004
             return ("conan", "inspect", str(conanfile))
-        raise RuntimeError(f"Conan version {str(conan_version())} not supported")
+        raise RuntimeError(f"Conan version {conan_version()!s} not supported")
 
     stdout, _ = _run_capture(*get_command(), timeout=TIMEOUT)
 
@@ -239,10 +259,12 @@ def inspect_requires_conanfile_txt(conanfile: Path) -> List[ConanReference]:
 def inspect_requires_conanfile(conanfile: Path) -> List[ConanReference]:
     """Get requirements of conanfile.py/conanfile.py"""
     if conanfile.name == "conanfile.py":
-        return inspect_requires_conanfile_py(conanfile)
+        return inspect_requires_conanfile_py(conanfile) + inspect_requirements_conanfile_py(
+            conanfile
+        )
     if conanfile.name == "conanfile.txt":
         return inspect_requires_conanfile_txt(conanfile)
-    raise ValueError(f"Invalid conanfile: {str(conanfile)}")
+    raise ValueError(f"Invalid conanfile: {conanfile!s}")
 
 
 async def search(
@@ -261,7 +283,7 @@ async def search(
             return ("conan", "search", pattern, "--remote", "all", "--raw")
         if conan_version().major == 2:  # noqa: PLR2004
             return ("conan", "search", pattern)
-        raise RuntimeError(f"Conan version {str(conan_version())} not supported")
+        raise RuntimeError(f"Conan version {conan_version()!s} not supported")
 
     stdout, _ = await _run_capture_async(*get_command(), timeout=timeout)
     return [

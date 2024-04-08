@@ -45,8 +45,7 @@ class CheckUpdateResult:
 
 
 class ProgressCallback(Protocol):
-    def __call__(self, done: int, total: int):
-        ...
+    def __call__(self, done: int, total: int): ...
 
 
 async def check_updates(
@@ -119,11 +118,9 @@ def upgrade_conanfile(conanfile: Path, update_results: Sequence[CheckUpdateResul
 
         occurrences = content.count(str(result.ref))
         if occurrences < 1:
-            raise RuntimeError(f"Reference '{str(result.ref)}' not found in conanfile")
+            raise RuntimeError(f"Reference '{result.ref!s}' not found in conanfile")
         if occurrences > 1:
-            raise RuntimeError(
-                f"Multiple occurrences of reference '{str(result.ref)}' in conanfile"
-            )
+            raise RuntimeError(f"Multiple occurrences of reference '{result.ref!s}' in conanfile")
 
         # generate new reference with update version
         new_ref = replace(

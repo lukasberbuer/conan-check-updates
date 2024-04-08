@@ -28,10 +28,10 @@ def test_conan_version_fail():
         conan_version()
 
 
-@pytest.mark.parametrize("conanfile", ["conanfile.py", "conanfile.txt"])
-def test_inspect_requires_conanfile(conanfile):
-    expected = parse_requires_conanfile_json(HERE / "conanfile.json")
-    requires = inspect_requires_conanfile(HERE / conanfile)
+@pytest.mark.parametrize("conanfileext", ["py", "txt"])
+def test_inspect_requires_conanfile(conanfileext):
+    expected = parse_requires_conanfile_json(HERE / f"conanfile.{conanfileext}.json")
+    requires = inspect_requires_conanfile(HERE / f"conanfile.{conanfileext}")
     assert requires == expected
 
 
