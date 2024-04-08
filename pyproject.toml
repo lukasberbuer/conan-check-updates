@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "conan-check-updates"
-version = "0.2.0"
+version = "0.3.0"
 description = "Check for updates of your conanfile.txt/conanfile.py requirements."
 authors = [{ name = "Lukas Berbuer", email = "lukas.berbuer@gmail.com" }]
 readme = "README.md"
