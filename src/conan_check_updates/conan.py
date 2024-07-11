@@ -173,6 +173,14 @@ class ConanReference:
 _REQUIRES_ATTRIBUTES = ("requires", "build_requires", "tool_requires", "test_requires")
 
 
+def dequote(s: str) -> str:
+    """If a string has single or double quotes around it, remove them."""
+    min_length = 2
+    if (len(s) >= min_length and s[0] == s[-1]) and s.startswith(("'", '"')):
+        return s[1:-1]
+    return s
+
+
 def inspect_requirements_conanfile_py(conanfile: Path) -> List[ConanReference]:
     """Get requirements from requirements() method of conanfile.py"""
     assert conanfile.name == "conanfile.py"
@@ -185,9 +193,10 @@ def inspect_requirements_conanfile_py(conanfile: Path) -> List[ConanReference]:
             # ignore empty line or line comments
             if not line or line.startswith("#"):
                 continue
-            res = re.search(r'self\.(?:tool_)*requires\("(.*)"\)', line)
+            res = re.search(r"self\.(?:tool_)*requires\((.*)\)", line)
             if res:
-                ref = res.group(1)
+                args = res.group(1)
+                ref = dequote(args)
                 if len(ref) > 0:
                     refs.append(ref)
     return list(map(ConanReference.parse, refs))
