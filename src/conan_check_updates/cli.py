@@ -217,7 +217,7 @@ async def main(argv: Optional[Sequence[str]] = None):
 
     results = list(filterfalse(is_latest, results))
     if not results:
-        print("No requirements found")
+        print("No requirements to update found")
         return
 
     # output update results

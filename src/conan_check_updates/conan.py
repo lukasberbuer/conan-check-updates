@@ -10,6 +10,7 @@ from functools import lru_cache
 from itertools import chain
 from pathlib import Path
 from typing import AsyncIterator, List, Optional, Tuple
+import json
 
 from .version import (
     Version,
@@ -117,7 +118,8 @@ _REGEX_CONAN_REFERENCE = (
     rf"(?P<package>{_REGEX_CONAN_ATTRIBUTE})"
     rf"\/(?P<version>{_REGEX_CONAN_VERSION})"
     rf"(?:#(?P<revision>{_REGEX_CONAN_REVISION_MD5_SHA1}))?"  # optional
-    rf"(?:@(?P<user>{_REGEX_CONAN_ATTRIBUTE})\/(?P<channel>{_REGEX_CONAN_ATTRIBUTE}))?"  # optional
+    rf"(?:@(?P<user>{_REGEX_CONAN_ATTRIBUTE}))?"
+    rf"(?:\/(?P<channel>{_REGEX_CONAN_ATTRIBUTE}))?"  # optional
 )
 
 _PATTERN_CONAN_REFERENCE = re.compile(_REGEX_CONAN_REFERENCE)
@@ -193,15 +195,14 @@ def inspect_requirements_conanfile_py(conanfile: Path) -> List[ConanReference]:
             # ignore empty line or line comments
             if not line or line.startswith("#"):
                 continue
-            res = re.search(r"self\.(?:tool_)*requires\((.*)\)", line)
+            res = re.search(r'self\.(?:(tool|python)_)*requires\("(.*)"(?:(\)|,.*))', line)
+            if res is None:
+                res = re.search(r'(tool|python)_requires = "(.*)"', line)
             if res:
-                args = res.group(1)
-                arg = args.partition(",")[0].strip()  # get first argument -> reference string
-                ref = _dequote(arg)
+                ref = res.group(2)
                 if len(ref) > 0:
                     refs.append(ref)
     return list(map(ConanReference.parse, refs))
-
 
 def inspect_requires_conanfile_py(conanfile: Path) -> List[ConanReference]:
     """Get requirements of conanfile.py with `conan inspect`."""
@@ -212,20 +213,12 @@ def inspect_requires_conanfile_py(conanfile: Path) -> List[ConanReference]:
             args = chain.from_iterable(("-a", attr) for attr in _REQUIRES_ATTRIBUTES)
             return ("conan", "inspect", str(conanfile), *args)
         if conan_version().major == 2:  # noqa: PLR2004
-            return ("conan", "inspect", str(conanfile))
+            return ("conan", "inspect", str(conanfile), "--format=json")
         raise RuntimeError(f"Conan version {conan_version()!s} not supported")
 
     stdout, _ = _run_capture(*get_command(), timeout=TIMEOUT)
 
-    def gen_dict():
-        for line in stdout.decode().splitlines():
-            key, _, value = (part.strip() for part in line.partition(":"))
-            if key and value:
-                if value.startswith(("(", "[")) and value.endswith((")", "]")):
-                    value = literal_eval(value)
-                yield key, value
-
-    attributes = dict(gen_dict())
+    attributes = dict(json.loads(stdout.decode()))
 
     def gen_requires():
         for key, value in attributes.items():
@@ -269,9 +262,7 @@ def inspect_requires_conanfile_txt(conanfile: Path) -> List[ConanReference]:
 def inspect_requires_conanfile(conanfile: Path) -> List[ConanReference]:
     """Get requirements of conanfile.py/conanfile.py"""
     if conanfile.name == "conanfile.py":
-        return inspect_requires_conanfile_py(conanfile) + inspect_requirements_conanfile_py(
-            conanfile
-        )
+        return inspect_requires_conanfile_py(conanfile) + inspect_requirements_conanfile_py(conanfile)
     if conanfile.name == "conanfile.txt":
         return inspect_requires_conanfile_txt(conanfile)
     raise ValueError(f"Invalid conanfile: {conanfile!s}")
